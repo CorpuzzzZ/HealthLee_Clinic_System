@@ -25,8 +25,6 @@ class Appointment extends Model
         ];
     }
 
-    // ── Relationships ──
-
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
@@ -35,6 +33,11 @@ class Appointment extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
+    }
+
+    public function medicalRecord(): HasOne
+    {
+        return $this->hasOne(MedicalRecord::class);
     }
 
     // ── Status Helpers ──
@@ -63,11 +66,4 @@ class Appointment extends Model
     {
         return $this->status === 'rescheduled';
     }
-
-    
-
-public function medicalRecord(): HasOne
-{
-    return $this->hasOne(MedicalRecord::class);
-}
 }
