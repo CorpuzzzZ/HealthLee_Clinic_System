@@ -65,95 +65,115 @@ class AppointmentController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $patient = $this->getPatient();
+{
+    $patient = $this->getPatient();
 
-        $request->validate([
-            'doctor_id'        => ['required', 'exists:doctors,id'],
-            'appointment_date' => ['required', 'date', 'after_or_equal:today'],
-            'appointment_time' => ['required'],
-            'notes'            => ['nullable', 'string', 'max:500'],
-        ]);
+    $request->validate([
+        'doctor_id'        => ['required', 'exists:doctors,id'],
+        'appointment_date' => ['required', 'date', 'after_or_equal:today'],
+        'appointment_time' => ['required'],
+        'notes'            => ['nullable', 'string', 'max:500'],
+    ]);
 
-        // ── Check doctor has availability on the selected date ──
-        $availabilityExists = Availability::where('doctor_id', $request->doctor_id)
-            ->whereDate('available_date', $request->appointment_date)
-            ->exists();
+    // ── Appointment duration is 1 hour ──
+    $startTime = \Carbon\Carbon::parse($request->appointment_time);
+    $endTime   = $startTime->copy()->addHour();
 
-        if (!$availabilityExists) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'appointment_date' => 'The doctor has no availability on the selected date. Please choose a different date.',
-                ]);
-        }
+    // ── Check doctor has availability on the selected date ──
+    $availabilityExists = \App\Models\Availability::where('doctor_id', $request->doctor_id)
+        ->whereDate('available_date', $request->appointment_date)
+        ->exists();
 
-        // ── Check time is within the doctor's available slot ──
-        $timeIsValid = Availability::where('doctor_id', $request->doctor_id)
-            ->whereDate('available_date', $request->appointment_date)
-            ->where('start_time', '<=', $request->appointment_time)
-            ->where('end_time',   '>=', $request->appointment_time)
-            ->exists();
+    if (!$availabilityExists) {
+        return back()
+            ->withInput()
+            ->withErrors([
+                'appointment_date' => 'The doctor has no availability on the selected date. Please choose a different date.',
+            ]);
+    }
 
-        if (!$timeIsValid) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'appointment_time' => 'The selected time is outside the doctor\'s available hours. Please choose a time within the available slot.',
-                ]);
-        }
+    // ── Check the full 1-hour slot fits within the doctor's availability ──
+    $slotFits = \App\Models\Availability::where('doctor_id', $request->doctor_id)
+        ->whereDate('available_date', $request->appointment_date)
+        ->where('start_time', '<=', $startTime->format('H:i:s'))
+        ->where('end_time',   '>=', $endTime->format('H:i:s'))
+        ->exists();
 
-        // ── Check no existing appointment at same date/time for this doctor ──
-        $alreadyBooked = Appointment::where('doctor_id', $request->doctor_id)
-            ->whereDate('appointment_date', $request->appointment_date)
-            ->where('appointment_time', $request->appointment_time)
-            ->whereNotIn('status', ['cancelled'])
-            ->exists();
+    if (!$slotFits) {
+        return back()
+            ->withInput()
+            ->withErrors([
+                'appointment_time' => 'The selected time slot (1 hour duration) does not fit within the doctor\'s available hours.',
+            ]);
+    }
 
-        if ($alreadyBooked) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'appointment_time' => 'This time slot is already booked. Please choose a different time.',
-                ]);
-        }
+    // ── Check no overlapping appointment exists for this doctor ──
+    // An overlap happens when:
+    // existing start_time < new end_time AND existing end_time > new start_time
+    $overlapping = \App\Models\Appointment::where('doctor_id', $request->doctor_id)
+        ->whereDate('appointment_date', $request->appointment_date)
+        ->whereNotIn('status', ['cancelled'])
+        ->where(function ($query) use ($startTime, $endTime) {
+            $query->where(function ($q) use ($startTime, $endTime) {
+                // New appointment starts during an existing one
+                $q->where('appointment_time', '<',  $endTime->format('H:i:s'))
+                  ->whereRaw("ADDTIME(appointment_time, '01:00:00') > ?", [$startTime->format('H:i:s')]);
+            });
+        })
+        ->exists();
 
-        // ── Create appointment as pending ──
-        $appointment = Appointment::create([
+    if ($overlapping) {
+        return back()
+            ->withInput()
+            ->withErrors([
+                'appointment_time' => 'This time slot overlaps with an existing appointment. Each appointment is 1 hour. Please choose a different time.',
+            ]);
+    }
+
+    // ── Create appointment ──
+    try {
+        $appointment = \App\Models\Appointment::create([
             'patient_id'       => $patient->id,
             'doctor_id'        => $request->doctor_id,
             'appointment_date' => $request->appointment_date,
-            'appointment_time' => $request->appointment_time,
+            'appointment_time' => $startTime->format('H:i:s'),
             'status'           => 'pending',
             'notes'            => $request->notes,
         ]);
-
-        // ── Notify patient that booking is received (NOT confirmed yet) ──
-        $appointment->load(['patient', 'doctor']);
-        \App\Models\Notification::create([
-            'user_id' => $patient->user_id,
-            'message' => "Your appointment request with Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name} on " .
-                         $appointment->appointment_date->format('d M Y') . " at " .
-                         \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A') .
-                         " has been submitted and is awaiting confirmation.",
-            'type'   => 'general',
-            'status' => 'unread',
-        ]);
-
-        // ── Notify doctor that a new booking request was made ──
-        \App\Models\Notification::create([
-            'user_id' => $appointment->doctor->user_id,
-            'message' => "New appointment request from {$appointment->patient->first_name} {$appointment->patient->last_name} on " .
-                         $appointment->appointment_date->format('d M Y') . " at " .
-                         \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A') .
-                         ". Please confirm or update the status.",
-            'type'   => 'general',
-            'status' => 'unread',
-        ]);
-
-        return redirect()->route('patient.appointments.index')
-                         ->with('success', 'Appointment request submitted! Awaiting doctor confirmation.');
+    } catch (\Illuminate\Database\QueryException $e) {
+        return back()
+            ->withInput()
+            ->withErrors([
+                'appointment_time' => 'This time slot is already booked. The database prevented a double booking.',
+            ]);
     }
+
+    // ── Notify patient ──
+    $appointment->load(['patient', 'doctor']);
+    \App\Models\Notification::create([
+        'user_id' => $patient->user_id,
+        'message' => "Your appointment request with Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name} on " .
+                     $appointment->appointment_date->format('d M Y') . " at " .
+                     $startTime->format('h:i A') . " – " . $endTime->format('h:i A') .
+                     " has been submitted and is awaiting confirmation.",
+        'type'   => 'general',
+        'status' => 'unread',
+    ]);
+
+    // ── Notify doctor ──
+    \App\Models\Notification::create([
+        'user_id' => $appointment->doctor->user_id,
+        'message' => "New appointment request from {$appointment->patient->first_name} {$appointment->patient->last_name} on " .
+                     $appointment->appointment_date->format('d M Y') . " at " .
+                     $startTime->format('h:i A') . " – " . $endTime->format('h:i A') .
+                     ". Please confirm or update the status.",
+        'type'   => 'general',
+        'status' => 'unread',
+    ]);
+
+    return redirect()->route('patient.appointments.index')
+                     ->with('success', 'Appointment request submitted! Awaiting doctor confirmation.');
+}
 
     public function show(Appointment $appointment)
     {

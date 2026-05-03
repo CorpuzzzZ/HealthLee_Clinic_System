@@ -23,7 +23,7 @@
 
     {{-- ── Stats ── --}}
     <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
+        <div class="">
             <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important; border-radius: 12px;">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -32,7 +32,7 @@
                         </div>
                         <span class="badge rounded-pill" style="background: #e7f1ff; color: #0d6efd; font-size: 0.75rem;">All</span>
                     </div>
-                    <h3 class="fw-bold mb-1">{{ $total }}</h3>
+                    <h3 class="fw-bold mb-1 fs-3 d-flex justify-content-end text-primary">{{ $total }}</h3>
                     <p class="text-muted mb-0 small">Total Records</p>
                 </div>
             </div>
@@ -43,9 +43,10 @@
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
         <div class="card-body px-4 py-3">
             <form method="GET" action="{{ route('doctor.medical-records.index') }}" class="row g-2 align-items-end">
-                <div class="col-md-6">
+                <div class="row">
+                <div class="col">
                     <label class="form-label small text-muted mb-1">Search by Patient Name</label>
-                    <div class="input-group">
+                    <div class="input-group" style="width: 57rem">
                         <span class="input-group-text bg-white border-end-0">
                             <i class="bi bi-search text-muted" style="font-size: 0.85rem;"></i>
                         </span>
@@ -56,13 +57,16 @@
                                placeholder="Search patient...">
                     </div>
                 </div>
-                <div class="col-md-3 d-flex gap-2">
+                <div class="col">
+                <div class="d-flex gap-2 justify-content-md-end">
                     <button type="submit" class="btn btn-primary px-4">
                         <i class="bi bi-funnel me-1"></i> Search
                     </button>
                     <a href="{{ route('doctor.medical-records.index') }}" class="btn btn-outline-secondary px-3">
                         <i class="bi bi-x-lg"></i>
                     </a>
+                </div>
+                </div>
                 </div>
             </form>
         </div>
