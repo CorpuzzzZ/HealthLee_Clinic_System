@@ -21,29 +21,24 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'role'                   => ['required', 'in:admin,patient,doctor'],
-            'first_name'             => ['required', 'string', 'max:255'],
-            'middle_name'            => ['nullable', 'string', 'max:255'],
-            'last_name'              => ['required', 'string', 'max:255'],
-            'gender'                 => ['required', 'in:male,female,other'],
-            'contact_number'         => ['required', 'string', 'max:20'],
-            'specialty'              => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
-            'birthdate'              => ['nullable', 'date', 'before:today'],
-            'height'                 => ['nullable', 'numeric', 'min:1', 'max:300'],
-            'weight'                 => ['nullable', 'numeric', 'min:1', 'max:700'],
-            'blood_type'             => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
-            'street'                 => ['nullable', 'string', 'max:255'],
-            'barangay'               => ['nullable', 'string', 'max:255'],
-            'city'                   => ['nullable', 'string', 'max:255'],
-            'province'               => ['nullable', 'string', 'max:255'],
-            'zip_code'               => ['nullable', 'string', 'max:10'],
-            'email'                  => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'password'               => ['required', 'confirmed', Rules\Password::defaults()],
-            // Services (doctor only)
-            'services'               => ['nullable', 'array'],
-            'services.*.name'        => ['required_with:services.*', 'string', 'max:255'],
-            'services.*.description' => ['nullable', 'string'],
-            'services.*.price'       => ['nullable', 'numeric', 'min:0'],
+            'role'           => ['required', 'in:admin,patient,doctor'],
+            'first_name'     => ['required', 'string', 'max:255'],
+            'middle_name'    => ['nullable', 'string', 'max:255'],
+            'last_name'      => ['required', 'string', 'max:255'],
+            'gender'         => ['required', 'in:male,female,other'],
+            'contact_number' => ['required', 'string', 'max:20'],
+            'specialty'      => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
+            'birthdate'      => ['nullable', 'date', 'before:today'],
+            'height'         => ['nullable', 'numeric', 'min:1', 'max:300'],
+            'weight'         => ['nullable', 'numeric', 'min:1', 'max:700'],
+            'blood_type'     => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'street'         => ['nullable', 'string', 'max:255'],
+            'barangay'       => ['nullable', 'string', 'max:255'],
+            'city'           => ['nullable', 'string', 'max:255'],
+            'province'       => ['nullable', 'string', 'max:255'],
+            'zip_code'       => ['nullable', 'string', 'max:10'],
+            'email'          => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
+            'password'       => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
@@ -52,84 +47,61 @@ class UserController extends Controller
             'role'     => $request->role,
         ]);
 
-        // Admin core data (not normalized — stays flat)
-        $adminProfileData = [
-            'user_id'        => $user->id,
-            'first_name'     => $request->first_name,
-            'middle_name'    => $request->middle_name,
-            'last_name'      => $request->last_name,
-            'gender'         => $request->gender,
-            'contact_number' => $request->contact_number,
-            'street'         => $request->street,
-            'barangay'       => $request->barangay,
-            'city'           => $request->city,
-            'province'       => $request->province,
-            'zip_code'       => $request->zip_code,
-        ];
-
-        // Patient core data (normalized + medical fields, no age)
-        $patientCoreData = [
+        // Shared core data for all roles
+        $coreData = [
             'user_id'     => $user->id,
             'first_name'  => $request->first_name,
             'middle_name' => $request->middle_name,
             'last_name'   => $request->last_name,
             'gender'      => $request->gender,
-            'birthdate'   => $request->birthdate,
-            'height'      => $request->height,
-            'weight'      => $request->weight,
-            'blood_type'  => $request->blood_type,
-        ];
-
-        // Doctor core data (normalized, no age)
-        $doctorCoreData = [
-            'user_id'    => $user->id,
-            'first_name' => $request->first_name,
-            'last_name'  => $request->last_name,
-            'gender'     => $request->gender,
-            'specialty'  => $request->specialty,
         ];
 
         match ($request->role) {
-            'admin'   => Admin::create($adminProfileData),
-
-            'patient' => tap(Patient::create($patientCoreData), function (Patient $patient) use ($request) {
-                            $patient->contact()->create([
+            'admin' => tap(Admin::create($coreData), function (Admin $admin) use ($request) {
+                            $admin->contact()->create([
                                 'contact_number' => $request->contact_number,
                             ]);
-                            $patient->address()->create([
+                            $admin->address()->create([
                                 'street'   => $request->street,
                                 'barangay' => $request->barangay,
                                 'city'     => $request->city,
                                 'province' => $request->province,
                                 'zip_code' => $request->zip_code,
                             ]);
-                         }),
+                       }),
 
-            'doctor'  => tap(Doctor::create($doctorCoreData), function (Doctor $doctor) use ($request) {
-                            $doctor->contact()->create([
-                                'contact_number' => $request->contact_number,
-                            ]);
-                            $doctor->address()->create([
-                                'street'   => $request->street,
-                                'barangay' => $request->barangay,
-                                'city'     => $request->city,
-                                'province' => $request->province,
-                                'zip_code' => $request->zip_code,
-                            ]);
+            'patient' => tap(Patient::create(array_merge($coreData, [
+                                'birthdate'  => $request->birthdate,
+                                'height'     => $request->height,
+                                'weight'     => $request->weight,
+                                'blood_type' => $request->blood_type,
+                            ])), function (Patient $patient) use ($request) {
+                                $patient->contact()->create([
+                                    'contact_number' => $request->contact_number,
+                                ]);
+                                $patient->address()->create([
+                                    'street'   => $request->street,
+                                    'barangay' => $request->barangay,
+                                    'city'     => $request->city,
+                                    'province' => $request->province,
+                                    'zip_code' => $request->zip_code,
+                                ]);
+                            }),
 
-                            // ── Save services ──
-                            if ($request->filled('services')) {
-                                foreach ($request->services as $svc) {
-                                    if (!empty($svc['name'])) {
-                                        $doctor->services()->create([
-                                            'name'        => $svc['name'],
-                                            'description' => $svc['description'] ?? null,
-                                            'price'       => $svc['price'] ?? null,
-                                        ]);
-                                    }
-                                }
-                            }
-                         }),
+            'doctor' => tap(Doctor::create(array_merge($coreData, [
+                                'specialty' => $request->specialty,
+                            ])), function (Doctor $doctor) use ($request) {
+                                $doctor->contact()->create([
+                                    'contact_number' => $request->contact_number,
+                                ]);
+                                $doctor->address()->create([
+                                    'street'   => $request->street,
+                                    'barangay' => $request->barangay,
+                                    'city'     => $request->city,
+                                    'province' => $request->province,
+                                    'zip_code' => $request->zip_code,
+                                ]);
+                            }),
         };
 
         return redirect()->route('admin.users.index')
@@ -157,9 +129,9 @@ class UserController extends Controller
     public function show(User $user)
     {
         $user->load([
-            'admin',
+            'admin.contact',  'admin.address',
             'patient.contact', 'patient.address',
-            'doctor.contact',  'doctor.address', 'doctor.services',
+            'doctor.contact',  'doctor.address',
         ]);
         return view('admin.users.show', compact('user'));
     }
@@ -167,9 +139,9 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $user->load([
-            'admin',
+            'admin.contact',  'admin.address',
             'patient.contact', 'patient.address',
-            'doctor.contact',  'doctor.address', 'doctor.services',
+            'doctor.contact',  'doctor.address',
         ]);
         $profile = $user->admin ?? $user->patient ?? $user->doctor ?? null;
         return view('admin.users.edit', compact('user', 'profile'));
@@ -178,28 +150,23 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'role'                   => ['required', 'in:admin,patient,doctor'],
-            'first_name'             => ['required', 'string', 'max:255'],
-            'middle_name'            => ['nullable', 'string', 'max:255'],
-            'last_name'              => ['required', 'string', 'max:255'],
-            'gender'                 => ['required', 'in:male,female,other'],
-            'contact_number'         => ['required', 'string', 'max:20'],
-            'specialty'              => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
-            'birthdate'              => ['nullable', 'date', 'before:today'],
-            'height'                 => ['nullable', 'numeric', 'min:1', 'max:300'],
-            'weight'                 => ['nullable', 'numeric', 'min:1', 'max:700'],
-            'blood_type'             => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
-            'street'                 => ['nullable', 'string', 'max:255'],
-            'barangay'               => ['nullable', 'string', 'max:255'],
-            'city'                   => ['nullable', 'string', 'max:255'],
-            'province'               => ['nullable', 'string', 'max:255'],
-            'zip_code'               => ['nullable', 'string', 'max:10'],
-            'email'                  => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            // Services (doctor only)
-            'services'               => ['nullable', 'array'],
-            'services.*.name'        => ['required_with:services.*', 'string', 'max:255'],
-            'services.*.description' => ['nullable', 'string'],
-            'services.*.price'       => ['nullable', 'numeric', 'min:0'],
+            'role'           => ['required', 'in:admin,patient,doctor'],
+            'first_name'     => ['required', 'string', 'max:255'],
+            'middle_name'    => ['nullable', 'string', 'max:255'],
+            'last_name'      => ['required', 'string', 'max:255'],
+            'gender'         => ['required', 'in:male,female,other'],
+            'contact_number' => ['required', 'string', 'max:20'],
+            'specialty'      => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
+            'birthdate'      => ['nullable', 'date', 'before:today'],
+            'height'         => ['nullable', 'numeric', 'min:1', 'max:300'],
+            'weight'         => ['nullable', 'numeric', 'min:1', 'max:700'],
+            'blood_type'     => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'street'         => ['nullable', 'string', 'max:255'],
+            'barangay'       => ['nullable', 'string', 'max:255'],
+            'city'           => ['nullable', 'string', 'max:255'],
+            'province'       => ['nullable', 'string', 'max:255'],
+            'zip_code'       => ['nullable', 'string', 'max:10'],
+            'email'          => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . $user->id],
         ]);
 
         $user->update([
@@ -207,47 +174,46 @@ class UserController extends Controller
             'role'  => $request->role,
         ]);
 
-        $adminProfileData = [
-            'first_name'     => $request->first_name,
-            'middle_name'    => $request->middle_name,
-            'last_name'      => $request->last_name,
-            'gender'         => $request->gender,
-            'contact_number' => $request->contact_number,
-            'street'         => $request->street,
-            'barangay'       => $request->barangay,
-            'city'           => $request->city,
-            'province'       => $request->province,
-            'zip_code'       => $request->zip_code,
-        ];
-
-        $patientCoreData = [
+        $coreData = [
             'first_name'  => $request->first_name,
             'middle_name' => $request->middle_name,
             'last_name'   => $request->last_name,
             'gender'      => $request->gender,
-            'birthdate'   => $request->birthdate,
-            'height'      => $request->height,
-            'weight'      => $request->weight,
-            'blood_type'  => $request->blood_type,
-        ];
-
-        $doctorCoreData = [
-            'first_name' => $request->first_name,
-            'last_name'  => $request->last_name,
-            'gender'     => $request->gender,
-            'specialty'  => $request->specialty,
         ];
 
         match ($request->role) {
-            'admin'   => $user->admin()->updateOrCreate(
-                            ['user_id' => $user->id],
-                            $adminProfileData
-                         ),
+            'admin' => tap(
+                            $user->admin()->updateOrCreate(
+                                ['user_id' => $user->id],
+                                $coreData
+                            ),
+                            function (Admin $admin) use ($request) {
+                                $admin->contact()->updateOrCreate(
+                                    ['admin_id' => $admin->id],
+                                    ['contact_number' => $request->contact_number]
+                                );
+                                $admin->address()->updateOrCreate(
+                                    ['admin_id' => $admin->id],
+                                    [
+                                        'street'   => $request->street,
+                                        'barangay' => $request->barangay,
+                                        'city'     => $request->city,
+                                        'province' => $request->province,
+                                        'zip_code' => $request->zip_code,
+                                    ]
+                                );
+                            }
+                       ),
 
             'patient' => tap(
                             $user->patient()->updateOrCreate(
                                 ['user_id' => $user->id],
-                                $patientCoreData
+                                array_merge($coreData, [
+                                    'birthdate'  => $request->birthdate,
+                                    'height'     => $request->height,
+                                    'weight'     => $request->weight,
+                                    'blood_type' => $request->blood_type,
+                                ])
                             ),
                             function (Patient $patient) use ($request) {
                                 $patient->contact()->updateOrCreate(
@@ -265,12 +231,14 @@ class UserController extends Controller
                                     ]
                                 );
                             }
-                         ),
+                        ),
 
-            'doctor'  => tap(
+            'doctor' => tap(
                             $user->doctor()->updateOrCreate(
                                 ['user_id' => $user->id],
-                                $doctorCoreData
+                                array_merge($coreData, [
+                                    'specialty' => $request->specialty,
+                                ])
                             ),
                             function (Doctor $doctor) use ($request) {
                                 $doctor->contact()->updateOrCreate(
@@ -287,25 +255,8 @@ class UserController extends Controller
                                         'zip_code' => $request->zip_code,
                                     ]
                                 );
-
-                                // ── Sync services ──
-                                // Delete all existing services then re-insert from form.
-                                // This is the simplest reliable sync for an admin-managed list.
-                                $doctor->services()->delete();
-
-                                if ($request->filled('services')) {
-                                    foreach ($request->services as $svc) {
-                                        if (!empty($svc['name'])) {
-                                            $doctor->services()->create([
-                                                'name'        => $svc['name'],
-                                                'description' => $svc['description'] ?? null,
-                                                'price'       => $svc['price'] ?? null,
-                                            ]);
-                                        }
-                                    }
-                                }
                             }
-                         ),
+                        ),
         };
 
         return redirect()->route('admin.users.index')
