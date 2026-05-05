@@ -39,19 +39,18 @@ class MedicalRecordController extends Controller
     }
 
     public function create()
-    {
-        $doctor = $this->getDoctor();
+{
+    $doctor = $this->getDoctor();
 
-        // Only completed appointments without a record yet
-        $appointments = Appointment::with('patient')
-            ->where('doctor_id', $doctor->id)
-            ->where('status', 'completed')
-            ->whereDoesntHave('medicalRecord')
-            ->orderBy('appointment_date', 'desc')
-            ->get();
+    $appointments = Appointment::with(['patient', 'service']) // ← add 'service'
+        ->where('doctor_id', $doctor->id)
+        ->where('status', 'completed')
+        ->whereDoesntHave('medicalRecord')
+        ->orderBy('appointment_date', 'desc')
+        ->get();
 
-        return view('doctor.medical-records.create', compact('appointments', 'doctor'));
-    }
+    return view('doctor.medical-records.create', compact('appointments', 'doctor'));
+}
 
     public function store(Request $request)
     {

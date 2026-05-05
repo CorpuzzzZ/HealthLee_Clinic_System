@@ -64,7 +64,7 @@
     {{-- Patients Table --}}
     <div class="card border-0 shadow-sm" style="border-radius: 12px;">
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive" style="overflow: visible;">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr style="background: #f8f9fa;">
@@ -155,15 +155,29 @@
 
                             {{-- Actions --}}
                             <td class="px-4 border-0 text-center">
-                                <div class="d-flex align-items-center justify-content-center gap-2">
-                                    <a href="{{ route('admin.patient-records.show', $patient) }}"
-                                        class="btn btn-sm btn-outline-primary rounded-3 px-3" title="View">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="{{ route('admin.patient-records.edit', $patient) }}"
-                                        class="btn btn-sm btn-outline-warning rounded-3 px-3" title="Edit Record">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary rounded-3 px-2 py-1 border-0"
+                                        type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="background:#f1f3f5;" title="Actions">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3"
+                                        style="min-width:160px;">
+                                        <li>
+                                            <a class="dropdown-item rounded-2 d-flex align-items-center gap-2 py-2"
+                                                href="{{ route('admin.patient-records.show', $patient) }}">
+                                                <i class="bi bi-eye text-primary" style="width:16px;"></i>
+                                                <span class="small">View Record</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item rounded-2 d-flex align-items-center gap-2 py-2"
+                                                href="{{ route('admin.patient-records.edit', $patient) }}">
+                                                <i class="bi bi-pencil text-warning" style="width:16px;"></i>
+                                                <span class="small">Edit Record</span>
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </div>
                             </td>
                         </tr>

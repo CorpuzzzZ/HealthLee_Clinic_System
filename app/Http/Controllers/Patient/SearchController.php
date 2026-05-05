@@ -44,16 +44,26 @@ class SearchController extends Controller
     }
 
     public function show(Doctor $doctor)
-    {
-        $doctor->load('availabilities');
+{
+    $doctor->load(['availabilities', 'contact', 'address']);
 
-        // Only show future availability slots
-        $availabilities = $doctor->availabilities()
-                                 ->whereDate('available_date', '>=', today())
-                                 ->orderBy('available_date')
-                                 ->orderBy('start_time')
-                                 ->get();
+    // Only future availability slots
+    $availabilities = $doctor->availabilities()
+                             ->whereDate('available_date', '>=', today())
+                             ->orderBy('available_date')
+                             ->orderBy('start_time')
+                             ->get();
 
-        return view('patient.doctors.show', compact('doctor', 'availabilities'));
-    }
+    // Build booked times as "date_HH:mm" keys for easy lookup in the view
+    $bookedTimes = \App\Models\Appointment::where('doctor_id', $doctor->id)
+        ->whereDate('appointment_date', '>=', today())
+        ->whereNotIn('status', ['cancelled'])
+        ->get()
+        ->map(fn($a) => \Carbon\Carbon::parse($a->available_date ?? $a->appointment_date)->format('Y-m-d')
+                      . '_'
+                      . \Carbon\Carbon::parse($a->appointment_time)->format('H:i'))
+        ->toArray();
+
+    return view('patient.doctors.show', compact('doctor', 'availabilities', 'bookedTimes'));
+}
 }

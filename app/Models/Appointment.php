@@ -11,17 +11,18 @@ class Appointment extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
+        'service_id',
         'appointment_date',
         'appointment_time',
         'status',
         'notes',
+       
     ];
 
     protected function casts(): array
     {
         return [
             'appointment_date' => 'date',
-            'appointment_time' => 'datetime:H:i',
         ];
     }
 
@@ -39,6 +40,15 @@ class Appointment extends Model
     {
         return $this->hasOne(MedicalRecord::class);
     }
+
+    // In app/Models/Appointment.php
+
+
+
+public function service(): BelongsTo
+{
+    return $this->belongsTo(\App\Models\Service::class);
+}
 
     // ── Status Helpers ──
 

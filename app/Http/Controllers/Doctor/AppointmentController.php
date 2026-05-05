@@ -49,11 +49,11 @@ class AppointmentController extends Controller
     }
 
     public function show(Appointment $appointment)
-    {
-        abort_if($appointment->doctor_id !== $this->getDoctor()->id, 403);
-        $appointment->load(['patient', 'medicalRecord']);
-        return view('doctor.appointments.show', compact('appointment'));
-    }
+{
+    abort_if($appointment->doctor_id !== $this->getDoctor()->id, 403);
+    $appointment->load(['patient.contact', 'medicalRecord', 'service']); // ← updated
+    return view('doctor.appointments.show', compact('appointment'));
+}
 
     public function updateStatus(Request $request, Appointment $appointment)
     {
