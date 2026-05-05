@@ -325,6 +325,16 @@
     <script>
         const SLOTS_URL = "{{ route('patient.appointments.slots') }}";
 
+        // ── FIX: Use local date (not UTC) to avoid timezone offset issues ──
+        // toISOString() returns UTC, which can shift the date by ±1 day
+        // depending on the user's timezone (e.g. PH is UTC+8).
+        const _today    = new Date();
+        const TODAY     = [
+            _today.getFullYear(),
+            String(_today.getMonth() + 1).padStart(2, '0'),
+            String(_today.getDate()).padStart(2, '0'),
+        ].join('-');
+
         const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
         const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -334,8 +344,12 @@
             doctorData[{{ $d->id }}] = {
                 specialty  : "{{ $d->specialty ?? 'General' }}",
                 services   : {!! $d->services->toJson() !!},
-                availDates : {!! $d->availabilities->pluck('available_date')->map(fn($dt) => $dt->format('Y-m-d'))->unique()->values()->toJson() !!},
+                availDates : {!! json_encode($d->availableDatesWithSlots ?? []) !!},
             };
+
+            // Debug: Log to browser console
+            console.log('Doctor {{ $d->id }} - {{ $d->first_name }} {{ $d->last_name }}');
+            console.log('  availDates from PHP:', {!! json_encode($d->availableDatesWithSlots ?? []) !!});
         @endforeach
 
         // ── Select2 ──
@@ -398,6 +412,11 @@
 
             const data = doctorData[doctorId];
 
+            // Debug log
+            console.log('Doctor changed to ID:', doctorId);
+            console.log('Raw availDates from PHP:', data.availDates);
+            console.log('Today is:', TODAY);
+
             // ── Services ──
             show('serviceSection');
             const svc        = document.getElementById('serviceSelect');
@@ -423,14 +442,19 @@
                 });
             }
 
-            // ── Date Cards ──
+            // ── Date Cards (ONLY FUTURE DATES - today and after) ──
             const dateGrid = document.getElementById('dateGrid');
             dateGrid.innerHTML = '';
 
-            if (data.availDates.length === 0) {
+            // Filter out past dates
+            const futureDates = data.availDates.filter(date => date >= TODAY);
+
+            console.log('Filtered futureDates:', futureDates);
+
+            if (futureDates.length === 0) {
                 dateGrid.innerHTML = '<small class="text-muted">No upcoming dates available.</small>';
             } else {
-                data.availDates.forEach(dateStr => {
+                futureDates.forEach(dateStr => {
                     const dt   = new Date(dateStr + 'T00:00:00');
                     const card = document.createElement('div');
                     card.className        = 'date-card';
@@ -451,6 +475,12 @@
 
         // ── Select a date card ──
         function selectDate(card, dateStr, doctorId) {
+            // Prevent selecting past dates
+            if (dateStr < TODAY) {
+                alert('Cannot select past dates. Please choose a future date.');
+                return;
+            }
+
             document.querySelectorAll('.date-card').forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
             document.getElementById('appointmentDate').value = dateStr;
@@ -464,11 +494,20 @@
                 .then(r => r.json())
                 .then(data => {
                     hide('slotLoading');
-                    renderSlots(data.slots);
+                    const availableSlots = data.slots.filter(s => !s.booked);
+                    if (availableSlots.length === 0) {
+                        show('slotEmpty');
+                        card.classList.remove('selected');
+                        document.getElementById('appointmentDate').value = '';
+                    } else {
+                        renderSlots(data.slots);
+                    }
                 })
                 .catch(() => {
                     hide('slotLoading');
                     show('slotEmpty');
+                    card.classList.remove('selected');
+                    document.getElementById('appointmentDate').value = '';
                 });
         }
 
@@ -513,7 +552,6 @@
 
                 if (!slot.booked) {
                     card.addEventListener('click', () => selectSlot(card, slot.value));
-                    // Restore after validation error
                     if (oldTime && slot.value === oldTime) {
                         selectSlot(card, slot.value);
                     }
@@ -559,6 +597,10 @@
                 alert('Please select an appointment date.');
                 return;
             }
+            if (date < TODAY) {
+                alert('Cannot book past dates. Please select a future date.');
+                return;
+            }
             if (!time) {
                 alert('Please select a time slot.');
                 return;
@@ -567,23 +609,42 @@
             document.getElementById('bookingForm').submit();
         }
 
-        // ── Restore state on validation error ──
+        // ── Restore state: from old() on validation error, or from URL query params (Book Slot redirect) ──
         window.addEventListener('load', function () {
-            const oldDoctor = "{{ old('doctor_id') }}";
-            const oldDate   = "{{ old('appointment_date') }}";
+            const params = new URLSearchParams(window.location.search);
 
-            if (oldDoctor) {
-                $('#doctorSelect').val(oldDoctor).trigger('change');
+            // old() takes priority (validation error re-fill); fall back to URL query params
+            const doctorId = "{{ old('doctor_id') }}" || params.get('doctor_id');
+            const date     = "{{ old('appointment_date') }}" || params.get('appointment_date');
+            const time     = "{{ old('appointment_time') }}" || params.get('appointment_time');
 
-                if (oldDate) {
-                    // Wait for date cards to render then auto-select the old date
-                    setTimeout(() => {
-                        const card = document.querySelector(`.date-card[data-date="${oldDate}"]`);
-                        if (card) {
-                            card.click();
+            if (!doctorId) return;
+
+            // 1. Set and trigger doctor select
+            $('#doctorSelect').val(doctorId).trigger('change');
+
+            // 2. Click the matching date card (wait for date cards to render)
+            if (date && date >= TODAY) {
+                setTimeout(() => {
+                    const card = document.querySelector(`.date-card[data-date="${date}"]`);
+                    if (card) {
+                        card.click(); // triggers slot fetch
+
+                        // 3. Select the time slot after slots load from fetch
+                        if (time) {
+                            const waitForSlot = setInterval(() => {
+                                const slotCard = document.querySelector(`.slot-card[data-value="${time}"]`);
+                                if (slotCard && !slotCard.classList.contains('booked')) {
+                                    slotCard.click();
+                                    clearInterval(waitForSlot);
+                                } else if (document.getElementById('slotLoading').style.display === 'none') {
+                                    // Slots finished loading but slot not found/booked — stop waiting
+                                    clearInterval(waitForSlot);
+                                }
+                            }, 100);
                         }
-                    }, 150);
-                }
+                    }
+                }, 150);
             }
         });
     </script>

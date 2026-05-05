@@ -21,7 +21,8 @@ class AppointmentController extends Controller
 
         $query = Appointment::with('patient')
             ->where('doctor_id', $doctor->id)
-            ->orderBy('appointment_date', 'desc');
+            ->orderByRaw("FIELD(status, 'pending', 'confirmed', 'rescheduled', 'completed', 'cancelled')")
+            ->orderBy('appointment_date', 'asc');
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -49,11 +50,11 @@ class AppointmentController extends Controller
     }
 
     public function show(Appointment $appointment)
-{
-    abort_if($appointment->doctor_id !== $this->getDoctor()->id, 403);
-    $appointment->load(['patient.contact', 'medicalRecord', 'service']); // ← updated
-    return view('doctor.appointments.show', compact('appointment'));
-}
+    {
+        abort_if($appointment->doctor_id !== $this->getDoctor()->id, 403);
+        $appointment->load(['patient.contact', 'medicalRecord', 'service']);
+        return view('doctor.appointments.show', compact('appointment'));
+    }
 
     public function updateStatus(Request $request, Appointment $appointment)
     {
@@ -70,14 +71,14 @@ class AppointmentController extends Controller
         $service = new NotificationService();
 
         if ($request->status !== $oldStatus) {
-    if ($request->status === 'confirmed') {
-        $service->appointmentConfirmation($appointment); // ← only fires when doctor confirms
-    } elseif ($request->status === 'cancelled') {
-        $service->appointmentCancelled($appointment);
-    } elseif ($request->status === 'rescheduled') {
-        $service->appointmentRescheduled($appointment);
-    }
-}
+            if ($request->status === 'confirmed') {
+                $service->appointmentConfirmation($appointment);
+            } elseif ($request->status === 'cancelled') {
+                $service->appointmentCancelled($appointment);
+            } elseif ($request->status === 'rescheduled') {
+                $service->appointmentRescheduled($appointment);
+            }
+        }
 
         return redirect()->route('doctor.appointments.show', $appointment)
                          ->with('success', 'Appointment status updated.');

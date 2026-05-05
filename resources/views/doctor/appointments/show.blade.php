@@ -20,6 +20,7 @@
     'completed' => 'background: #e8f5ee; color: #198754;',
     'cancelled' => 'background: #fdecea; color: #dc3545;',
     'rescheduled' => 'background: #f3e8ff; color: #7c3aed;',
+    'reschedule_requested' => 'background: #fff3e0; color: #fd7e14;',
     ];
     $statusIcons = [
     'pending' => 'bi-clock',
@@ -27,9 +28,44 @@
     'completed' => 'bi-check-circle-fill',
     'cancelled' => 'bi-x-circle',
     'rescheduled' => 'bi-arrow-repeat',
+    'reschedule_requested' => 'bi-calendar2-week',
     ];
     $startTime = \Carbon\Carbon::parse($appointment->appointment_time);
     $endTime = $startTime->copy()->addHour();
+
+    // Check if appointment date has passed
+    $isPastDate = \Carbon\Carbon::parse($appointment->appointment_date)->isPast();
+    $isToday = \Carbon\Carbon::parse($appointment->appointment_date)->isToday();
+
+    // Check if this is a reschedule request
+    $isRescheduleRequest = $appointment->status === 'reschedule_requested';
+
+    // Determine available status options based on current status
+    $availableStatuses = [];
+    switch($appointment->status) {
+    case 'pending':
+    $availableStatuses = ['confirmed' => 'Confirmed'];
+    break;
+    case 'reschedule_requested':
+    $availableStatuses = [
+    'confirmed' => 'Approve Reschedule',
+    'cancelled' => 'Reject & Cancel',
+    ];
+    break;
+    case 'confirmed':
+    $options = [];
+    if ($isPastDate || $isToday) {
+    $options['completed'] = 'Completed';
+    } else {
+    $completedDisabled = true;
+    }
+    $options['cancelled'] = 'Cancelled';
+    $options['rescheduled'] = 'Reschedule (by doctor)';
+    $availableStatuses = $options;
+    break;
+    default:
+    $availableStatuses = [];
+    }
     @endphp
 
     {{-- Flash Messages --}}
@@ -52,13 +88,24 @@
                         </div>
                         <div>
                             <div class="text-muted small">Appointment Status</div>
-                            <div class="fw-bold fs-5">{{ ucfirst($appointment->status) }}</div>
+                            <div class="fw-bold fs-5">
+                                @if($appointment->status === 'reschedule_requested')
+                                Reschedule Requested
+                                @else
+                                {{ ucfirst($appointment->status) }}
+                                @endif
+                            </div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-4 flex-wrap">
                         <div class="text-center">
                             <div class="text-muted small">Date</div>
                             <div class="fw-semibold">{{ $appointment->appointment_date->format('d M Y') }}</div>
+                            @if(!$isPastDate && !$isToday && $appointment->status === 'confirmed')
+                            <small class="text-warning d-block mt-1">
+                                <i class="bi bi-calendar-exclamation"></i> Future date
+                            </small>
+                            @endif
                         </div>
                         <div class="text-center">
                             <div class="text-muted small">Time</div>
@@ -118,11 +165,16 @@
                                 </span>
                             </div>
                         </div>
-                        @if($appointment->notes)
+                        @if($appointment->notes || $appointment->reschedule_notes)
                         <div class="col-12">
                             <div class="p-3 rounded-3" style="background: #f8f9fa;">
+                                @if($appointment->reschedule_notes)
+                                <small class="text-muted d-block mb-1">Reschedule Request Notes</small>
+                                <span class="fw-medium small text-warning">{{ $appointment->reschedule_notes }}</span>
+                                @elseif($appointment->notes)
                                 <small class="text-muted d-block mb-1">Appointment Notes</small>
                                 <span class="fw-medium small">{{ $appointment->notes }}</span>
+                                @endif
                             </div>
                         </div>
                         @endif
@@ -188,10 +240,45 @@
                         <div class="fw-medium">This appointment is {{ $appointment->status }}</div>
                         <small>Status can no longer be changed.</small>
                     </div>
+                    @elseif(empty($availableStatuses))
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-question-circle fs-2 d-block mb-2 opacity-25"></i>
+                        <div class="fw-medium">No status updates available</div>
+                        <small>Please contact support if you need to change this appointment.</small>
+                    </div>
                     @else
-                    <p class="text-muted small mb-4">
-                        Update the status of this appointment. The patient will be notified automatically.
-                    </p>
+
+                    @if($isRescheduleRequest)
+                    <div class="mb-4">
+                        <div class="alert alert-warning rounded-3 border-0 mb-3" style="background: #fff3e0;">
+                            <i class="bi bi-calendar2-week me-2 text-warning"></i>
+                            <strong>Patient requested to reschedule this appointment.</strong><br>
+                            <small>Please review the request and choose to approve or reject it.</small>
+                        </div>
+                    </div>
+                    @else
+                    <div class="mb-4">
+                        <div class="alert alert-info rounded-3 border-0 mb-3" style="background: #e7f1ff;">
+                            <i class="bi bi-info-circle-fill me-2 text-primary"></i>
+                            @if($appointment->status === 'pending')
+                            <strong>Step 1 of 2:</strong> Confirm this appointment first. After confirmation, you can
+                            mark it as
+                            <strong>Completed</strong>, <strong>Cancelled</strong>, or <strong>Rescheduled</strong>.
+                            @elseif($appointment->status === 'confirmed')
+                            @if(!$isPastDate && !$isToday)
+                            <strong>⚠️ Cannot mark as completed yet:</strong> This appointment is scheduled for a future
+                            date ({{ $appointment->appointment_date->format('d M Y') }}).
+                            You can only mark it as <strong>Completed</strong> on or after the appointment date.
+                            @else
+                            <strong>Step 2 of 2:</strong> Mark this appointment as
+                            <strong>Completed</strong> (if service was provided),
+                            <strong>Cancelled</strong>, or <strong>Rescheduled</strong>.
+                            @endif
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+
                     <form method="POST" action="{{ route('doctor.appointments.status', $appointment) }}">
                         @csrf
                         @method('PATCH')
@@ -200,12 +287,9 @@
                             <select name="status"
                                 class="form-select form-select-lg @error('status') is-invalid @enderror" required>
                                 <option value="" disabled selected>Select status...</option>
-                                @if($appointment->status !== 'confirmed')
-                                <option value="confirmed">Confirmed</option>
-                                @endif
-                                <option value="completed">Completed</option>
-                                <option value="rescheduled">Rescheduled</option>
-                                <option value="cancelled">Cancelled</option>
+                                @foreach($availableStatuses as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
                             </select>
                             @error('status')
                             <div class="invalid-feedback">{{ $message }}</div>

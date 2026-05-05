@@ -17,9 +17,19 @@ class DashboardController extends Controller
         $totalPatients     = Patient::count();
         $totalDoctors      = Doctor::count();
         $totalAdmins       = Admin::count();
-        $totalAppointments = Appointment::count(); // Placeholder until Appointment model is ready
+        $totalAppointments = Appointment::count();
 
-        $recentUsers = User::latest()->take(5)->get();
+        $recentDoctors = User::with('doctor')
+            ->where('role', 'doctor')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $recentPatients = User::with('patient')
+            ->where('role', 'patient')
+            ->latest()
+            ->take(5)
+            ->get();
 
         return view('admin.dashboard', compact(
             'totalUsers',
@@ -27,7 +37,8 @@ class DashboardController extends Controller
             'totalDoctors',
             'totalAdmins',
             'totalAppointments',
-            'recentUsers',
+            'recentDoctors',
+            'recentPatients',
         ));
     }
 }

@@ -88,6 +88,7 @@ Route::prefix('patient')
         Route::post('/appointments',              [PatientAppointmentController::class, 'store'])->name('appointments.store');
         Route::get('/appointments/{appointment}', [PatientAppointmentController::class, 'show'])->name('appointments.show');
         Route::patch('/appointments/{appointment}/cancel', [PatientAppointmentController::class, 'cancel'])->name('appointments.cancel');
+        
     });
 
 // ── Doctor Routes ─────────────────────────────────────────

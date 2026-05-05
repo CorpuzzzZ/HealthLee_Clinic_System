@@ -39,6 +39,11 @@ class UserController extends Controller
             'zip_code'       => ['nullable', 'string', 'max:10'],
             'email'          => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'password'       => ['required', 'confirmed', Rules\Password::defaults()],
+            // Services validation
+            'services'               => ['nullable', 'array'],
+            'services.*.name'        => ['required_with:services.*', 'string', 'max:255'],
+            'services.*.description' => ['nullable', 'string'],
+            'services.*.price'       => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $user = User::create([
@@ -101,6 +106,19 @@ class UserController extends Controller
                                     'province' => $request->province,
                                     'zip_code' => $request->zip_code,
                                 ]);
+                                
+                                // ── Save Services ──
+                                if ($request->filled('services')) {
+                                    foreach ($request->services as $svc) {
+                                        if (!empty($svc['name'])) {
+                                            $doctor->services()->create([
+                                                'name'        => $svc['name'],
+                                                'description' => $svc['description'] ?? null,
+                                                'price'       => $svc['price'] ?? null,
+                                            ]);
+                                        }
+                                    }
+                                }
                             }),
         };
 
@@ -129,9 +147,9 @@ class UserController extends Controller
     public function show(User $user)
     {
         $user->load([
-            'admin.contact',  'admin.address',
+            'admin.contact', 'admin.address',
             'patient.contact', 'patient.address',
-            'doctor.contact',  'doctor.address',
+            'doctor.contact', 'doctor.address', 'doctor.services',
         ]);
         return view('admin.users.show', compact('user'));
     }
@@ -139,9 +157,9 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $user->load([
-            'admin.contact',  'admin.address',
+            'admin.contact', 'admin.address',
             'patient.contact', 'patient.address',
-            'doctor.contact',  'doctor.address',
+            'doctor.contact', 'doctor.address', 'doctor.services',
         ]);
         $profile = $user->admin ?? $user->patient ?? $user->doctor ?? null;
         return view('admin.users.edit', compact('user', 'profile'));
@@ -167,6 +185,11 @@ class UserController extends Controller
             'province'       => ['nullable', 'string', 'max:255'],
             'zip_code'       => ['nullable', 'string', 'max:10'],
             'email'          => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            // Services validation
+            'services'               => ['nullable', 'array'],
+            'services.*.name'        => ['required_with:services.*', 'string', 'max:255'],
+            'services.*.description' => ['nullable', 'string'],
+            'services.*.price'       => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $user->update([
@@ -255,6 +278,21 @@ class UserController extends Controller
                                         'zip_code' => $request->zip_code,
                                     ]
                                 );
+                                
+                                // ── Sync Services (Delete all existing, then re-insert) ──
+                                $doctor->services()->delete();
+                                
+                                if ($request->filled('services')) {
+                                    foreach ($request->services as $svc) {
+                                        if (!empty($svc['name'])) {
+                                            $doctor->services()->create([
+                                                'name'        => $svc['name'],
+                                                'description' => $svc['description'] ?? null,
+                                                'price'       => $svc['price'] ?? null,
+                                            ]);
+                                        }
+                                    }
+                                }
                             }
                         ),
         };

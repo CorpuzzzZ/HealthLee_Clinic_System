@@ -49,14 +49,17 @@ class AppointmentController extends Controller
     }
 
     public function create(Request $request)
-    {
-        // Only doctors who have future availability
-        $doctors = Doctor::whereHas('availabilities', function ($q) {
-                        $q->whereDate('available_date', '>=', today());
+{
+    // Get today's date
+    $today = now()->format('Y-m-d');
+    
+    // Only doctors who have future availability (today or future)
+    $doctors = Doctor::whereHas('availabilities', function ($q) use ($today) {
+                        $q->whereDate('available_date', '>=', $today);
                     })
                     ->with([
                         'availabilities' => fn($q) => $q
-                            ->whereDate('available_date', '>=', today())
+                            ->whereDate('available_date', '>=', $today)
                             ->orderBy('available_date')
                             ->orderBy('start_time'),
                         'services',
@@ -64,13 +67,69 @@ class AppointmentController extends Controller
                     ->orderBy('last_name')
                     ->get();
 
-        return view('patient.appointments.create', compact('doctors'));
+    // Pre-calculate which dates actually have available slots
+    foreach ($doctors as $doctor) {
+        $datesWithSlots = [];
+        
+        // Get unique dates from availabilities (already filtered to >= today)
+        $dates = $doctor->availabilities
+            ->pluck('available_date')
+            ->map(fn($dt) => Carbon::parse($dt)->format('Y-m-d'))
+            ->unique()
+            ->values()
+            ->toArray();
+        
+        // CRITICAL: Remove any dates that are less than today
+        $dates = array_filter($dates, function($date) use ($today) {
+            return $date >= $today;
+        });
+        
+        foreach ($dates as $date) {
+            // Get availability windows for this date
+            $availabilitiesForDate = $doctor->availabilities
+                ->filter(fn($a) => Carbon::parse($a->available_date)->format('Y-m-d') === $date);
+            
+            // Get booked times for this date
+            $bookedTimes = Appointment::where('doctor_id', $doctor->id)
+                ->whereDate('appointment_date', $date)
+                ->whereNotIn('status', ['cancelled'])
+                ->pluck('appointment_time')
+                ->map(fn($t) => Carbon::parse($t)->format('H:i'))
+                ->toArray();
+            
+            // Check if any 1-hour slot is available
+            $hasAvailableSlot = false;
+            
+            foreach ($availabilitiesForDate as $avail) {
+                $start = Carbon::createFromFormat('H:i:s', $avail->start_time);
+                $end = Carbon::createFromFormat('H:i:s', $avail->end_time);
+                
+                while ($start->copy()->addHour()->lte($end)) {
+                    $slotStart = $start->format('H:i');
+                    if (!in_array($slotStart, $bookedTimes)) {
+                        $hasAvailableSlot = true;
+                        break 2;
+                    }
+                    $start->addHour();
+                }
+            }
+            
+            if ($hasAvailableSlot) {
+                $datesWithSlots[] = $date;
+            }
+        }
+        
+        // FINAL SAFETY: Ensure NO past dates are passed to view
+        $doctor->availableDatesWithSlots = array_values(array_filter($datesWithSlots, function($date) use ($today) {
+            return $date >= $today;
+        }));
     }
+
+    return view('patient.appointments.create', compact('doctors'));
+}
 
     public function store(Request $request)
     {
-        
-
         $patient = $this->getPatient();
 
         $request->validate([
@@ -86,7 +145,6 @@ class AppointmentController extends Controller
         $endTime   = $startTime->copy()->addHour();
 
         // ── Check doctor has availability on the selected date ──
-        // Fix: filter in PHP to handle UTC datetime stored in available_date
         $availabilityExists = Availability::where('doctor_id', $request->doctor_id)
             ->get()
             ->filter(fn($a) => Carbon::parse($a->available_date)->format('Y-m-d') === $request->appointment_date)
@@ -211,10 +269,9 @@ class AppointmentController extends Controller
         ]);
 
         $doctor = Doctor::findOrFail($request->doctor_id);
-        $date   = $request->date; // e.g. "2026-05-07"
+        $date   = $request->date;
 
-        // ── Fix: available_date is stored as UTC datetime, so whereDate() fails.
-        //    Fetch all and filter in PHP using Carbon to handle timezone correctly. ──
+        // Fetch all and filter in PHP using Carbon to handle timezone correctly
         $availabilities = Availability::where('doctor_id', $doctor->id)
             ->get()
             ->filter(fn($a) => Carbon::parse($a->available_date)->format('Y-m-d') === $date);
@@ -223,7 +280,7 @@ class AppointmentController extends Controller
             return response()->json(['slots' => []]);
         }
 
-        // ── Get already booked times on that date (excluding cancelled) ──
+        // Get already booked times on that date (excluding cancelled)
         $bookedTimes = Appointment::where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $date)
             ->whereNotIn('status', ['cancelled'])
@@ -234,7 +291,6 @@ class AppointmentController extends Controller
         $slots = [];
 
         foreach ($availabilities as $avail) {
-            // ── start_time/end_time are plain "HH:MM:SS" strings — use createFromFormat ──
             $start = Carbon::createFromFormat('H:i:s', $avail->start_time);
             $end   = Carbon::createFromFormat('H:i:s', $avail->end_time);
 
