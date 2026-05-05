@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Patient extends Model
 {
@@ -16,26 +16,41 @@ class Patient extends Model
         'last_name',
         'gender',
         'age',
-        'contact_number',
-        'street',
-        'barangay',
-        'city',
-        'province',
-        'zip_code',
+        'birthdate',
+        'height',
+        'weight',
+        'blood_type',
     ];
 
-    public function appointments(): HasMany
-{
-    return $this->hasMany(Appointment::class);
-}
+    protected function casts(): array
+    {
+        return [
+            'birthdate' => 'date',
+        ];
+    }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    public function contact(): HasOne
+    {
+        return $this->hasOne(PatientContact::class);
+    }
+
+    public function address(): HasOne
+    {
+        return $this->hasOne(PatientAddress::class);
+    }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
     public function medicalRecords(): HasMany
-{
-    return $this->hasMany(MedicalRecord::class);
-}
+    {
+        return $this->hasMany(MedicalRecord::class);
+    }
 }

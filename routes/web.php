@@ -13,6 +13,9 @@ use App\Http\Controllers\Doctor\MedicalRecordController;
 use App\Http\Controllers\Doctor\AppointmentController as DoctorAppointmentController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\PatientRecordController as AdminPatientRecordController;
+use App\Http\Controllers\Doctor\PatientRecordController as DoctorPatientRecordController;
+
 
 Route::get('/', function () {
     return view('auth.login');
@@ -49,6 +52,10 @@ Route::prefix('admin')
 
         Route::get('/reports', [ReportController::class, 'index'])
             ->name('reports.index');
+
+        Route::resource('patient-records', AdminPatientRecordController::class)
+            ->only(['index', 'show', 'edit', 'update'])
+            ->parameters(['patient-records' => 'patient']);
     });
 
 // ── Shared Notification Routes (patient + doctor) ─────────
@@ -62,7 +69,6 @@ Route::prefix('notifications')
      });
 
 // ── Patient Routes ────────────────────────────────────────
-// ── Patient Routes ────────────────────────────────────────
 Route::prefix('patient')
     ->name('patient.')
     ->middleware(['auth', 'role:patient'])
@@ -75,11 +81,12 @@ Route::prefix('patient')
         Route::get('/doctors',          [SearchController::class, 'index'])->name('doctors.index');
         Route::get('/doctors/{doctor}', [SearchController::class, 'show'])->name('doctors.show');
 
-        // Appointments
-        Route::get('/appointments',                        [PatientAppointmentController::class, 'index'])->name('appointments.index');
-        Route::get('/appointments/create',                 [PatientAppointmentController::class, 'create'])->name('appointments.create');
-        Route::post('/appointments',                       [PatientAppointmentController::class, 'store'])->name('appointments.store');
-        Route::get('/appointments/{appointment}',          [PatientAppointmentController::class, 'show'])->name('appointments.show');
+        // Appointments — static/action routes MUST come before {appointment} wildcard
+        Route::get('/appointments',               [PatientAppointmentController::class, 'index'])->name('appointments.index');
+        Route::get('/appointments/create',        [PatientAppointmentController::class, 'create'])->name('appointments.create');
+        Route::get('/appointments/slots',         [PatientAppointmentController::class, 'slots'])->name('appointments.slots'); // ← moved up
+        Route::post('/appointments',              [PatientAppointmentController::class, 'store'])->name('appointments.store');
+        Route::get('/appointments/{appointment}', [PatientAppointmentController::class, 'show'])->name('appointments.show');
         Route::patch('/appointments/{appointment}/cancel', [PatientAppointmentController::class, 'cancel'])->name('appointments.cancel');
     });
 
@@ -89,7 +96,6 @@ Route::prefix('doctor')
     ->middleware(['auth', 'role:doctor'])
     ->group(function () {
 
-        // Dashboard
         Route::get('/dashboard', [DoctorDashboardController::class, 'index'])
             ->name('dashboard');
 
@@ -111,6 +117,10 @@ Route::prefix('doctor')
                  Route::put('/{availability}',    [AvailabilityController::class, 'update'])->name('update');
                  Route::delete('/{availability}', [AvailabilityController::class, 'destroy'])->name('destroy');
              });
+
+        Route::resource('patient-records', DoctorPatientRecordController::class)
+             ->only(['index', 'show', 'edit', 'update']);
     });
+
 
 require __DIR__.'/auth.php';

@@ -47,22 +47,24 @@ class AppointmentController extends Controller
         ));
     }
 
-    public function create(Request $request)
-    {
-        $doctor = null;
+   public function create(Request $request)
+{
+    // Only doctors who have future availability
+    $doctors = Doctor::whereHas('availabilities', function ($q) {
+                    $q->whereDate('available_date', '>=', today());
+                })
+                ->with([
+                    'availabilities' => fn($q) => $q
+                        ->whereDate('available_date', '>=', today())
+                        ->orderBy('available_date')
+                        ->orderBy('start_time'),
+                    'services',
+                ])
+                ->orderBy('last_name')
+                ->get();
 
-        if ($request->filled('doctor_id')) {
-            $doctor = Doctor::with(['availabilities' => function ($q) {
-                $q->whereDate('available_date', '>=', today())
-                  ->orderBy('available_date')
-                  ->orderBy('start_time');
-            }])->findOrFail($request->doctor_id);
-        }
-
-        $doctors = Doctor::orderBy('last_name')->get();
-
-        return view('patient.appointments.create', compact('doctors', 'doctor'));
-    }
+    return view('patient.appointments.create', compact('doctors'));
+}
 
     public function store(Request $request)
 {
@@ -73,6 +75,8 @@ class AppointmentController extends Controller
         'appointment_date' => ['required', 'date', 'after_or_equal:today'],
         'appointment_time' => ['required'],
         'notes'            => ['nullable', 'string', 'max:500'],
+        'service_id' => ['nullable', 'exists:services,id'],
+
     ]);
 
     // ── Appointment duration is 1 hour ──
@@ -135,6 +139,7 @@ class AppointmentController extends Controller
         $appointment = \App\Models\Appointment::create([
             'patient_id'       => $patient->id,
             'doctor_id'        => $request->doctor_id,
+            'service_id' => $request->service_id,
             'appointment_date' => $request->appointment_date,
             'appointment_time' => $startTime->format('H:i:s'),
             'status'           => 'pending',
@@ -195,4 +200,54 @@ class AppointmentController extends Controller
         return redirect()->route('patient.appointments.index')
                          ->with('success', 'Appointment cancelled successfully.');
     }
+
+    public function slots(Request $request)
+{
+    $request->validate([
+        'doctor_id' => ['required', 'exists:doctors,id'],
+        'date'      => ['required', 'date'],
+    ]);
+
+    $doctor = Doctor::findOrFail($request->doctor_id);
+
+    // Get availability windows for the selected date
+    $availabilities = Availability::where('doctor_id', $doctor->id)
+        ->whereDate('available_date', $request->date)
+        ->get();
+
+    if ($availabilities->isEmpty()) {
+        return response()->json(['slots' => []]);
+    }
+
+    // Get already booked times on that date (excluding cancelled)
+    $bookedTimes = Appointment::where('doctor_id', $doctor->id)
+        ->whereDate('appointment_date', $request->date)
+        ->whereNotIn('status', ['cancelled'])
+        ->pluck('appointment_time')
+        ->map(fn($t) => \Carbon\Carbon::parse($t)->format('H:i'))
+        ->toArray();
+
+    $slots = [];
+
+    foreach ($availabilities as $avail) {
+        $start = \Carbon\Carbon::parse($avail->start_time);
+        $end   = \Carbon\Carbon::parse($avail->end_time);
+
+        // Generate 1-hour slots within availability window
+        while ($start->copy()->addHour()->lte($end)) {
+            $slotStart = $start->format('H:i');
+            $slotEnd   = $start->copy()->addHour()->format('H:i');
+
+            $slots[] = [
+                'value'    => $slotStart,
+                'label'    => $start->format('h:i A') . ' – ' . $start->copy()->addHour()->format('h:i A'),
+                'booked'   => in_array($slotStart, $bookedTimes),
+            ];
+
+            $start->addHour();
+        }
+    }
+
+    return response()->json(['slots' => $slots]);
+}
 }

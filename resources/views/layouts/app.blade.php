@@ -36,8 +36,9 @@
             margin: 6px 12px;
             font-weight: 500;
             transition: all 0.25s ease;
-            display: flex;           /* add this */
-    align-items: center;
+            display: flex;
+            /* add this */
+            align-items: center;
         }
 
         .sidebar .nav-link:hover,
@@ -120,23 +121,23 @@
                 </a>
 
                 {{-- User Info --}}
-<div class="mb-5 pb-4 border-bottom border-secondary">
-    <small class="opacity-75 d-block mb-1">Logged in as</small>
-    <strong class="d-block text-white fs-6">
-        @if(Auth::user()->role === 'admin' && Auth::user()->admin)
-            {{ Auth::user()->admin->first_name }} {{ Auth::user()->admin->last_name }}
-        @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
-            Dr. {{ Auth::user()->doctor->first_name }} {{ Auth::user()->doctor->last_name }}
-        @elseif(Auth::user()->role === 'patient' && Auth::user()->patient)
-            {{ Auth::user()->patient->first_name }} {{ Auth::user()->patient->last_name }}
-        @else
-            {{ Auth::user()->email }}
-        @endif
-    </strong>
-    <span class="badge user-badge bg-primary mt-2">
-        {{ ucfirst(Auth::user()->role) }}
-    </span>
-</div>
+                <div class="mb-5 pb-4 border-bottom border-secondary">
+                    <small class="opacity-75 d-block mb-1">Logged in as</small>
+                    <strong class="d-block text-white fs-6">
+                        @if(Auth::user()->role === 'admin' && Auth::user()->admin)
+                        {{ Auth::user()->admin->first_name }} {{ Auth::user()->admin->last_name }}
+                        @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
+                        Dr. {{ Auth::user()->doctor->first_name }} {{ Auth::user()->doctor->last_name }}
+                        @elseif(Auth::user()->role === 'patient' && Auth::user()->patient)
+                        {{ Auth::user()->patient->first_name }} {{ Auth::user()->patient->last_name }}
+                        @else
+                        {{ Auth::user()->email }}
+                        @endif
+                    </strong>
+                    <span class="badge user-badge bg-primary mt-2">
+                        {{ ucfirst(Auth::user()->role) }}
+                    </span>
+                </div>
 
                 <!-- Navigation Menu (from navigation.blade.php) -->
                 @include('layouts.navigation')
@@ -148,7 +149,7 @@
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit"
-                            class="nav-link text-white w-100 text-start p-3 border-0 bg-transparent rounded-3 d-flex align-items-center">
+                        class="nav-link text-white w-100 text-start p-3 border-0 bg-transparent rounded-3 d-flex align-items-center">
                         <i class="bi bi-box-arrow-right me-3 fs-5"></i>
                         <span class="fw-medium"><small>Logout</small></span>
                     </button>
@@ -173,27 +174,27 @@
                             {{ now()->format('l, d F Y') }}
                         </span>
                         <span class="text-dark fw-medium">
-    @if(Auth::user()->role === 'admin' && Auth::user()->admin)
-        {{ Auth::user()->admin->first_name }} {{ Auth::user()->admin->last_name }}
-    @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
-        Dr. {{ Auth::user()->doctor->first_name }} {{ Auth::user()->doctor->last_name }}
-    @elseif(Auth::user()->role === 'patient' && Auth::user()->patient)
-        {{ Auth::user()->patient->first_name }} {{ Auth::user()->patient->last_name }}
-    @else
-        {{ Auth::user()->email }}
-    @endif
-</span>
+                            @if(Auth::user()->role === 'admin' && Auth::user()->admin)
+                            {{ Auth::user()->admin->first_name }} {{ Auth::user()->admin->last_name }}
+                            @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
+                            Dr. {{ Auth::user()->doctor->first_name }} {{ Auth::user()->doctor->last_name }}
+                            @elseif(Auth::user()->role === 'patient' && Auth::user()->patient)
+                            {{ Auth::user()->patient->first_name }} {{ Auth::user()->patient->last_name }}
+                            @else
+                            {{ Auth::user()->email }}
+                            @endif
+                        </span>
                     </div>
                 </div>
             </nav>
 
             <!-- Page Heading -->
             @isset($header)
-                <div class="px-4 pt-3">
-                    <div class="bg-white rounded-3 shadow-sm px-4 py-3 border-start border-primary border-4">
-                        {{ $header }}
-                    </div>
+            <div class="px-4 pt-3">
+                <div class="bg-white rounded-3 shadow-sm px-4 py-3 border-start border-primary border-4">
+                    {{ $header }}
                 </div>
+            </div>
             @endisset
 
             <!-- Page Content -->
@@ -228,50 +229,3 @@
 </body>
 
 </html>
-
-{{-- <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <title>{{ config('app.name', 'Laravel') }}</title>
-
-    <!-- Css -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-
-<body>
-    <div class="min-vh-100 bg-light pb-2">
-        @include('layouts.navigation')
-
-        <!-- Page Heading -->
-        @isset($header)
-            <header class="bg-white shadow-sm">
-                <div class="container py-4">
-                    {{ $header }}
-                </div>
-            </header>
-        @endisset
-
-        <!-- Page Content -->
-        <main class="container">
-            {{ $slot }}
-        </main>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        let myModalEl = document.querySelector('[data-modal="1"]');
-        if (myModalEl) {
-            const myModal = new bootstrap.Modal(myModalEl);
-            myModal.show();
-        }
-    </script>
-</body>
-
-</html> --}}
