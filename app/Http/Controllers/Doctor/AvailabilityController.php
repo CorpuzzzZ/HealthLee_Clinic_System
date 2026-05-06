@@ -51,19 +51,35 @@ class AvailabilityController extends Controller
             'available_date' => ['required', 'date', 'after_or_equal:today'],
             'start_time'     => ['required', 'date_format:H:i'],
             'end_time'       => ['required', 'date_format:H:i', 'after:start_time'],
+        ], [
+            'end_time.after' => 'End time must be after start time.',
         ]);
 
-        // ── Must be at least 1 hour to fit a slot ──
-        $start = Carbon::createFromFormat('H:i', $request->start_time);
-        $end   = Carbon::createFromFormat('H:i', $request->end_time);
+        $doctor = $this->getDoctor();
+        $start  = Carbon::createFromFormat('H:i', $request->start_time);
+        $end    = Carbon::createFromFormat('H:i', $request->end_time);
 
+        // ── Must be at least 1 hour to fit a slot ──
         if ($start->copy()->addHour()->gt($end)) {
-            return back()->withInput()->withErrors([
-                'end_time' => 'The availability window must be at least 1 hour long (each appointment is 1 hour).',
-            ]);
+            session()->flash('_add_error', 'The availability window must be at least 1 hour long (each appointment is 1 hour).');
+            return back()->withInput();
         }
 
-        $this->getDoctor()->availabilities()->create([
+        // ── Check for overlapping slots on the same date ──
+        $overlap = Availability::where('doctor_id', $doctor->id)
+            ->whereDate('available_date', $request->available_date)
+            ->where(function ($q) use ($request) {
+                $q->where('start_time', '<', $request->end_time)
+                  ->where('end_time',   '>', $request->start_time);
+            })
+            ->exists();
+
+        if ($overlap) {
+            session()->flash('_add_error', 'This time slot overlaps with an existing slot on the same date. Please choose a different time.');
+            return back()->withInput();
+        }
+
+        $doctor->availabilities()->create([
             'available_date' => $request->available_date,
             'start_time'     => $request->start_time,
             'end_time'       => $request->end_time,
@@ -81,16 +97,41 @@ class AvailabilityController extends Controller
             'available_date' => ['required', 'date'],
             'start_time'     => ['required', 'date_format:H:i'],
             'end_time'       => ['required', 'date_format:H:i', 'after:start_time'],
+        ], [
+            'end_time.after' => 'End time must be after start time.',
         ]);
 
-        // ── Must be at least 1 hour to fit a slot ──
-        $start = Carbon::createFromFormat('H:i', $request->start_time);
-        $end   = Carbon::createFromFormat('H:i', $request->end_time);
+        $doctor = $this->getDoctor();
+        $start  = Carbon::createFromFormat('H:i', $request->start_time);
+        $end    = Carbon::createFromFormat('H:i', $request->end_time);
 
+        // ── Must be at least 1 hour to fit a slot ──
         if ($start->copy()->addHour()->gt($end)) {
-            return back()->withInput()->withErrors([
-                'end_time' => 'The availability window must be at least 1 hour long (each appointment is 1 hour).',
-            ]);
+            session()->flash('_edit_slot_id', $availability->id);
+            session()->flash('_edit_date',    $request->available_date);
+            session()->flash('_edit_start',   $request->start_time);
+            session()->flash('_edit_end',     $request->end_time);
+            session()->flash('_edit_error',   'The availability window must be at least 1 hour long (each appointment is 1 hour).');
+            return back()->withInput();
+        }
+
+        // ── Check for overlapping slots on the same date (exclude current slot) ──
+        $overlap = Availability::where('doctor_id', $doctor->id)
+            ->whereDate('available_date', $request->available_date)
+            ->where('id', '!=', $availability->id)
+            ->where(function ($q) use ($request) {
+                $q->where('start_time', '<', $request->end_time)
+                  ->where('end_time',   '>', $request->start_time);
+            })
+            ->exists();
+
+        if ($overlap) {
+            session()->flash('_edit_slot_id', $availability->id);
+            session()->flash('_edit_date',    $request->available_date);
+            session()->flash('_edit_start',   $request->start_time);
+            session()->flash('_edit_end',     $request->end_time);
+            session()->flash('_edit_error',   'This time slot overlaps with an existing slot on the same date. Please choose a different time.');
+            return back()->withInput();
         }
 
         $availability->update([

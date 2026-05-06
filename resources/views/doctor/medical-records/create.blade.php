@@ -94,12 +94,18 @@
                                 required>
                                 <option value="">Search appointment...</option>
                                 @foreach($appointments as $appt)
+                                @php
+                                // Pre-select priority: validation old() first, then URL preselection
+                                $isSelected = old('appointment_id')
+                                ? old('appointment_id') == $appt->id
+                                : ($preselectedAppointment?->id === $appt->id);
+                                @endphp
                                 <option value="{{ $appt->id }}"
                                     data-date="{{ $appt->appointment_date->format('d M Y') }}"
                                     data-time="{{ \Carbon\Carbon::parse($appt->appointment_time)->format('h:i A') }}"
                                     data-patient="{{ $appt->patient->first_name }} {{ $appt->patient->last_name }}"
-                                    data-service="{{ $appt->service->name ?? 'No service' }}" {{
-                                    old('appointment_id')==$appt->id ? 'selected' : '' }}>
+                                    data-service="{{ $appt->service->name ?? 'No service' }}" {{ $isSelected
+                                    ? 'selected' : '' }}>
                                     {{ $appt->appointment_date->format('d M Y') }}
                                     — {{ $appt->patient->first_name }} {{ $appt->patient->last_name }}
                                     ({{ \Carbon\Carbon::parse($appt->appointment_time)->format('h:i A') }})
@@ -208,6 +214,7 @@
                 templateSelection: formatAppointmentSelected,
             });
 
+            // ── Show preview card whenever selection changes ──
             $('#appointmentSelect').on('change', function () {
                 const opt = this.options[this.selectedIndex];
                 if (!this.value) {
@@ -256,13 +263,11 @@
                 return option.text;
             }
 
-            // Restore preview on validation error
-            window.addEventListener('load', function () {
-                const select = document.getElementById('appointmentSelect');
-                if (select.value) {
-                    select.dispatchEvent(new Event('change'));
-                }
-            });
+            // ── Auto-trigger preview on load if appointment is already selected ──
+            // Covers: redirect from appointment show page + validation error re-fill
+            if ($('#appointmentSelect').val()) {
+                $('#appointmentSelect').trigger('change');
+            }
         });
     </script>
 

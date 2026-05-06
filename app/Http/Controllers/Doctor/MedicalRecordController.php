@@ -38,19 +38,30 @@ class MedicalRecordController extends Controller
         return view('doctor.medical-records.index', compact('records', 'total', 'doctor'));
     }
 
-    public function create()
-{
-    $doctor = $this->getDoctor();
+    public function create(Request $request)
+    {
+        $doctor = $this->getDoctor();
 
-    $appointments = Appointment::with(['patient', 'service']) // ← add 'service'
-        ->where('doctor_id', $doctor->id)
-        ->where('status', 'completed')
-        ->whereDoesntHave('medicalRecord')
-        ->orderBy('appointment_date', 'desc')
-        ->get();
+        $appointments = Appointment::with(['patient', 'service'])
+            ->where('doctor_id', $doctor->id)
+            ->where('status', 'completed')
+            ->whereDoesntHave('medicalRecord')
+            ->orderBy('appointment_date', 'desc')
+            ->get();
 
-    return view('doctor.medical-records.create', compact('appointments', 'doctor'));
-}
+        // Pre-select appointment if coming from the appointment show page
+        $preselectedAppointment = null;
+        if ($request->filled('appointment_id')) {
+            $preselectedAppointment = $appointments
+                ->firstWhere('id', (int) $request->appointment_id);
+        }
+
+        return view('doctor.medical-records.create', compact(
+            'appointments',
+            'doctor',
+            'preselectedAppointment',
+        ));
+    }
 
     public function store(Request $request)
     {

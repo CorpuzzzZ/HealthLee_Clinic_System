@@ -49,12 +49,14 @@ return new class extends Migration
                 p.id AS patient_id,
                 CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
                 p.gender, p.blood_type,
+                p.birthdate,
+                TIMESTAMPDIFF(YEAR, p.birthdate, CURDATE()) AS age,
                 COUNT(a.id)                 AS total_visits,
                 SUM(a.status = 'completed') AS completed_visits,
                 MAX(a.appointment_date)     AS last_visit_date
             FROM patients p
             LEFT JOIN appointments a ON a.patient_id = p.id
-            GROUP BY p.id, p.first_name, p.last_name, p.gender, p.blood_type
+            GROUP BY p.id, p.first_name, p.last_name, p.gender, p.blood_type, p.birthdate
         ");
     }
 

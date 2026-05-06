@@ -333,7 +333,8 @@
                         <i class="bi bi-eye me-1"></i> View Record
                     </a>
                     @else
-                    <a href="{{ route('doctor.medical-records.create') }}"
+                    {{-- ✅ Pass appointment_id so the create form pre-selects this patient --}}
+                    <a href="{{ route('doctor.medical-records.create', ['appointment_id' => $appointment->id]) }}"
                         class="btn btn-sm btn-success rounded-3 px-3">
                         <i class="bi bi-plus-lg me-1"></i> Add Record
                     </a>

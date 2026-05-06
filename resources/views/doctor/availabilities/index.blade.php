@@ -28,6 +28,31 @@
     </div>
     @endif
 
+    {{-- ── Validation Errors (shown above cards so user always sees them) ── --}}
+    @if(session('_add_error'))
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm mb-4" role="alert">
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+        <strong>Add Slot Failed:</strong> {{ session('_add_error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
+    @if(session('_edit_error'))
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm mb-4" role="alert">
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+        <strong>Update Slot Failed:</strong> {{ session('_edit_error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
+    @if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 border-0 shadow-sm mb-4" role="alert">
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+        {{ $errors->first() }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
     {{-- ── Stats ── --}}
     <div class="row g-3 mb-4">
 
@@ -107,8 +132,8 @@
             <h6 class="fw-bold mb-0">Time Slots</h6>
             <small class="text-muted">All your scheduled availability</small>
         </div>
-        <div class="card-body p-0 pt-3">
-            <div class="table-responsive">
+        <div class="card-body p-0 pt-3" style="overflow: visible;">
+            <div class="table-responsive" style="overflow: visible;">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr style="background: #f8f9fa;">
@@ -133,50 +158,40 @@
                         $durationLabel = ($hours > 0 ? $hours . 'h ' : '') . ($mins > 0 ? $mins . 'm' : '');
                         @endphp
                         <tr>
-                            {{-- # --}}
                             <td class="px-4 border-0 text-muted small">
                                 {{ ($availabilities->currentPage() - 1) * $availabilities->perPage() + $loop->iteration
                                 }}
                             </td>
-
-                            {{-- Date --}}
                             <td class="px-4 border-0">
                                 <div class="fw-medium small">
-                                    {{ $slot->available_date->format('d M Y') }}
+                                    {{ \Carbon\Carbon::parse($slot->available_date)->format('d M Y') }}
                                 </div>
                             </td>
-
-                            {{-- Day --}}
                             <td class="px-4 border-0">
-                                <small class="text-muted">{{ $slot->available_date->format('l') }}</small>
+                                <small class="text-muted">
+                                    {{ \Carbon\Carbon::parse($slot->available_date)->format('l') }}
+                                </small>
                             </td>
-
-                            {{-- Start Time --}}
                             <td class="px-4 border-0">
                                 <span class="fw-medium small">{{ $start->format('h:i A') }}</span>
                             </td>
-
-                            {{-- End Time --}}
                             <td class="px-4 border-0">
                                 <span class="fw-medium small">{{ $end->format('h:i A') }}</span>
                             </td>
-
-                            {{-- Duration --}}
                             <td class="px-4 border-0">
                                 <span class="badge rounded-pill px-3 py-2"
                                     style="background: #e7f1ff; color: #0d6efd; font-size: 0.75rem;">
                                     <i class="bi bi-hourglass-split me-1"></i>{{ $durationLabel }}
                                 </span>
                             </td>
-
-                            {{-- Status --}}
                             <td class="px-4 border-0">
-                                @if($slot->available_date->isPast() && !$slot->available_date->isToday())
+                                @php $availDate = \Carbon\Carbon::parse($slot->available_date); @endphp
+                                @if($availDate->isPast() && !$availDate->isToday())
                                 <span class="badge rounded-pill px-3 py-2"
                                     style="background: #f8f9fa; color: #6c757d; font-size: 0.75rem;">
                                     <i class="bi bi-clock-history me-1"></i> Past
                                 </span>
-                                @elseif($slot->available_date->isToday())
+                                @elseif($availDate->isToday())
                                 <span class="badge rounded-pill px-3 py-2"
                                     style="background: #fff8e1; color: #e6a800; font-size: 0.75rem;">
                                     <i class="bi bi-sun me-1"></i> Today
@@ -188,23 +203,21 @@
                                 </span>
                                 @endif
                             </td>
-
-                            {{-- Actions --}}
                             <td class="px-4 border-0 text-center">
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-outline-secondary rounded-3 px-2" type="button"
-                                        data-bs-toggle="dropdown" aria-expanded="false" title="Actions">
+                                        data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="bi bi-three-dots"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow border-0"
                                         style="border-radius: 10px; min-width: 140px;">
                                         <li>
                                             <button type="button" class="dropdown-item rounded-2 py-2" onclick="openEditModal(
-                            {{ $slot->id }},
-                            '{{ $slot->available_date->format('Y-m-d') }}',
-                            '{{ $start->format('H:i') }}',
-                            '{{ $end->format('H:i') }}'
-                        )">
+                                                            {{ $slot->id }},
+                                                            '{{ \Carbon\Carbon::parse($slot->available_date)->format('Y-m-d') }}',
+                                                            '{{ $start->format('H:i') }}',
+                                                            '{{ $end->format('H:i') }}'
+                                                        )">
                                                 <i class="bi bi-pencil me-2 text-warning"></i> Edit
                                             </button>
                                         </li>
@@ -264,12 +277,21 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body px-4 pb-4 pt-3">
+
+                    @if(session('_add_error'))
+                    <div class="alert alert-danger rounded-3 border-0 mb-3 py-2">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        {{ session('_add_error') }}
+                    </div>
+                    @endif
+
                     <form method="POST" action="{{ route('doctor.availabilities.store') }}">
                         @csrf
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Available Date <span
-                                    class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">
+                                Available Date <span class="text-danger">*</span>
+                            </label>
                             <input type="date" name="available_date" value="{{ old('available_date') }}"
                                 min="{{ now()->format('Y-m-d') }}"
                                 class="form-control @error('available_date') is-invalid @enderror" required>
@@ -280,8 +302,9 @@
 
                         <div class="row g-3 mb-4">
                             <div class="col-6">
-                                <label class="form-label fw-semibold">Start Time <span
-                                        class="text-danger">*</span></label>
+                                <label class="form-label fw-semibold">
+                                    Start Time <span class="text-danger">*</span>
+                                </label>
                                 <input type="time" name="start_time" value="{{ old('start_time') }}"
                                     class="form-control @error('start_time') is-invalid @enderror" required>
                                 @error('start_time')
@@ -289,8 +312,9 @@
                                 @enderror
                             </div>
                             <div class="col-6">
-                                <label class="form-label fw-semibold">End Time <span
-                                        class="text-danger">*</span></label>
+                                <label class="form-label fw-semibold">
+                                    End Time <span class="text-danger">*</span>
+                                </label>
                                 <input type="time" name="end_time" value="{{ old('end_time') }}"
                                     class="form-control @error('end_time') is-invalid @enderror" required>
                                 @error('end_time')
@@ -326,26 +350,37 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body px-4 pb-4 pt-3">
+
+                    @if(session('_edit_error'))
+                    <div class="alert alert-danger rounded-3 border-0 mb-3 py-2">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        {{ session('_edit_error') }}
+                    </div>
+                    @endif
+
                     <form method="POST" id="editSlotForm" action="">
                         @csrf
                         @method('PUT')
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Available Date <span
-                                    class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">
+                                Available Date <span class="text-danger">*</span>
+                            </label>
                             <input type="date" id="edit_available_date" name="available_date" class="form-control"
                                 required>
                         </div>
 
                         <div class="row g-3 mb-4">
                             <div class="col-6">
-                                <label class="form-label fw-semibold">Start Time <span
-                                        class="text-danger">*</span></label>
+                                <label class="form-label fw-semibold">
+                                    Start Time <span class="text-danger">*</span>
+                                </label>
                                 <input type="time" id="edit_start_time" name="start_time" class="form-control" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label fw-semibold">End Time <span
-                                        class="text-danger">*</span></label>
+                                <label class="form-label fw-semibold">
+                                    End Time <span class="text-danger">*</span>
+                                </label>
                                 <input type="time" id="edit_end_time" name="end_time" class="form-control" required>
                             </div>
                         </div>
@@ -375,7 +410,15 @@
             new bootstrap.Modal(document.getElementById('editSlotModal')).show();
         }
 
-        @if($errors->any())
+        // ── Re-open the correct modal on error ──
+        @if(session('_edit_slot_id'))
+            openEditModal(
+                {{ session('_edit_slot_id') }},
+                '{{ session('_edit_date') }}',
+                '{{ session('_edit_start') }}',
+                '{{ session('_edit_end') }}'
+            );
+        @elseif(session('_add_error') || old('available_date'))
             new bootstrap.Modal(document.getElementById('addSlotModal')).show();
         @endif
     </script>
