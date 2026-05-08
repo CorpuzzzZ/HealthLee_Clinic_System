@@ -31,7 +31,6 @@
 
     {{-- ── Stats Cards ── --}}
     <div class="row g-3 mb-4">
-
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm h-100 text-center"
                 style="border-top: 4px solid #0d6efd; border-radius: 12px;">
@@ -41,7 +40,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm h-100 text-center"
                 style="border-top: 4px solid #198754; border-radius: 12px;">
@@ -51,7 +49,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm h-100 text-center"
                 style="border-top: 4px solid #ffc107; border-radius: 12px;">
@@ -61,7 +58,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm h-100 text-center"
                 style="border-top: 4px solid #0dcaf0; border-radius: 12px;">
@@ -71,7 +67,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm h-100 text-center"
                 style="border-top: 4px solid #dc3545; border-radius: 12px;">
@@ -81,7 +76,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm h-100 text-center"
                 style="border-top: 4px solid #7c3aed; border-radius: 12px;">
@@ -91,7 +85,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     {{-- ── Appointment Summary (vw_appointment_summary) ── --}}
@@ -115,9 +108,15 @@
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Date</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Time</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Patient</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Gender</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Blood Type</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Doctor</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Specialty</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Service</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Price</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Status</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Notes</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Booked Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -141,11 +140,23 @@
                             <td class="px-4 border-0 small fw-medium">
                                 {{ $appt->patient_name }}
                             </td>
+                            <td class="px-4 border-0 small text-muted">
+                                {{ ucfirst($appt->patient_gender ?? '—') }}
+                            </td>
+                            <td class="px-4 border-0 small text-muted">
+                                {{ $appt->patient_blood_type ?? '—' }}
+                            </td>
                             <td class="px-4 border-0 small fw-medium">
                                 {{ $appt->doctor_name }}
                             </td>
                             <td class="px-4 border-0 small text-muted">
-                                {{ $appt->doctor_specialty }}
+                                {{ $appt->doctor_specialty ?? 'General' }}
+                            </td>
+                            <td class="px-4 border-0 small text-muted">
+                                {{ $appt->service_name ?? '—' }}
+                            </td>
+                            <td class="px-4 border-0 small text-muted">
+                                {{ $appt->service_price ? '₱' . number_format($appt->service_price, 2) : '—' }}
                             </td>
                             <td class="px-4 border-0">
                                 <span class="badge rounded-pill px-3 py-2"
@@ -153,10 +164,17 @@
                                     {{ ucfirst($appt->status) }}
                                 </span>
                             </td>
+                            <td class="px-4 border-0 small text-muted">
+                                {{ Str::limit($appt->notes, 30) ?? '—' }}
+                            </td>
+                            <td class="px-4 border-0 small text-muted">
+                                {{ $appt->booked_at ? \Carbon\Carbon::parse($appt->booked_at)->format('d M Y h:i A') :
+                                '—' }}
+                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted border-0">
+                            <td colspan="12" class="text-center py-4 text-muted border-0">
                                 <i class="bi bi-calendar-x fs-2 d-block mb-2 opacity-25"></i>
                                 No appointments found for this period.
                             </td>
@@ -181,7 +199,7 @@
     <div class="row g-4">
 
         {{-- ── Doctor Performance (vw_doctor_performance) ── --}}
-        <div class="col-lg-6">
+        <div class="col">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 12px;">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
                     <div class="d-flex align-items-center gap-2 mb-1">
@@ -200,11 +218,16 @@
                             <thead>
                                 <tr style="background: #f8f9fa;">
                                     <th class="px-4 py-3 text-muted fw-normal small border-0">Doctor</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0">Specialty</th>
                                     <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Total</th>
-                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Done</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Completed</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Pending</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Confirmed</th>
                                     <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Cancelled</th>
-                                    {{-- <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Patients
-                                    </th> --}}
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Rescheduled
+                                    </th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Unique
+                                        Patients</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -212,36 +235,42 @@
                                 <tr>
                                     <td class="px-4 border-0">
                                         <div class="fw-medium small">{{ $doc->doctor_name }}</div>
-                                        <small class="text-muted">{{ $doc->specialty }}</small>
+                                    </td>
+                                    <td class="px-4 border-0">
+                                        <small class="text-muted">{{ $doc->specialty ?? 'General' }}</small>
                                     </td>
                                     <td class="px-4 border-0 text-center">
-                                        <span class="fw-bold small" style="color: #0d6efd;">
-                                            {{ $doc->total_appointments }}
-                                        </span>
+                                        <span class="fw-bold small" style="color: #0d6efd;">{{ $doc->total_appointments
+                                            }}</span>
                                     </td>
                                     <td class="px-4 border-0 text-center">
-                                        <span class="fw-bold small" style="color: #198754;">
-                                            {{ $doc->completed }}
-                                        </span>
+                                        <span class="fw-bold small" style="color: #198754;">{{ $doc->completed }}</span>
                                     </td>
                                     <td class="px-4 border-0 text-center">
-                                        <span class="fw-bold small" style="color: #dc3545;">
-                                            {{ $doc->cancelled }}
-                                        </span>
+                                        <span class="fw-bold small" style="color: #e6a800;">{{ $doc->pending }}</span>
                                     </td>
                                     <td class="px-4 border-0 text-center">
-                                        <span class="fw-bold small" style="color: #0dcaf0;">
-                                            {{ $doc->unique_patients }}
-                                        </span>
+                                        <span class="fw-bold small" style="color: #0d6efd;">{{ $doc->confirmed }}</span>
+                                    </td>
+                                    <td class="px-4 border-0 text-center">
+                                        <span class="fw-bold small" style="color: #dc3545;">{{ $doc->cancelled }}</span>
+                                    </td>
+                                    <td class="px-4 border-0 text-center">
+                                        <span class="fw-bold small" style="color: #7c3aed;">{{ $doc->rescheduled ?? 0
+                                            }}</span>
+                                    </td>
+                                    <td class="px-4 border-0 text-center">
+                                        <span class="fw-bold small" style="color: #0dcaf0;">{{ $doc->unique_patients ??
+                                            0 }}</span>
                                     </td>
                                 </tr>
                                 @empty
-                                <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted border-0">
+                                <table>
+                                    <td colspan="9" class="text-center py-4 text-muted border-0">
                                         No doctor data available.
                                     </td>
-                                </tr>
-                                @endforelse
+                                    </tr>
+                                    @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -250,7 +279,7 @@
         </div>
 
         {{-- ── Patient Visit History (vw_patient_visit_history) ── --}}
-        <div class="col-lg-6">
+        <div class="col">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 12px;">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
                     <div class="d-flex align-items-center gap-2 mb-1">
@@ -261,7 +290,7 @@
                         <span class="text-muted small font-monospace">vw_patient_visit_history</span>
                     </div>
                     <h6 class="fw-bold mb-0">Patient Visit History</h6>
-                    <small class="text-muted">Top 10 patients by visit count</small>
+                    <small class="text-muted">Patient visit statistics</small>
                 </div>
                 <div class="card-body p-0 pt-3">
                     <div class="table-responsive">
@@ -269,9 +298,16 @@
                             <thead>
                                 <tr style="background: #f8f9fa;">
                                     <th class="px-4 py-3 text-muted fw-normal small border-0">Patient</th>
-                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Visits</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0">Gender</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0">Blood Type</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0">Age</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Total Visits
+                                    </th>
                                     <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Completed</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Cancelled</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Pending</th>
                                     <th class="px-4 py-3 text-muted fw-normal small border-0">Last Visit</th>
+                                    <th class="px-4 py-3 text-muted fw-normal small border-0">First Visit</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -279,31 +315,48 @@
                                 <tr>
                                     <td class="px-4 border-0">
                                         <div class="fw-medium small">{{ $patient->patient_name }}</div>
-                                        <small class="text-muted">
-                                            {{ ucfirst($patient->gender ?? '—') }}, {{ $patient->age ?? '—' }} yrs
-                                        </small>
+                                    </td>
+                                    <td class="px-4 border-0">
+                                        <small class="text-muted">{{ ucfirst($patient->gender ?? '—') }}</small>
+                                    </td>
+                                    <td class="px-4 border-0">
+                                        <small class="text-muted">{{ $patient->blood_type ?? '—' }}</small>
+                                    </td>
+                                    <td class="px-4 border-0">
+                                        <small class="text-muted">{{ $patient->age ?? '—' }}</small>
                                     </td>
                                     <td class="px-4 border-0 text-center">
-                                        <span class="fw-bold small" style="color: #0d6efd;">
-                                            {{ $patient->total_visits }}
-                                        </span>
+                                        <span class="fw-bold small" style="color: #0d6efd;">{{ $patient->total_visits
+                                            }}</span>
                                     </td>
                                     <td class="px-4 border-0 text-center">
-                                        <span class="fw-bold small" style="color: #198754;">
-                                            {{ $patient->completed_visits }}
-                                        </span>
+                                        <span class="fw-bold small" style="color: #198754;">{{
+                                            $patient->completed_visits }}</span>
+                                    </td>
+                                    <td class="px-4 border-0 text-center">
+                                        <span class="fw-bold small" style="color: #dc3545;">{{
+                                            $patient->cancelled_visits }}</span>
+                                    </td>
+                                    <td class="px-4 border-0 text-center">
+                                        <span class="fw-bold small" style="color: #e6a800;">{{ $patient->pending_visits
+                                            }}</span>
                                     </td>
                                     <td class="px-4 border-0">
                                         <small class="text-muted">
-                                            {{ $patient->last_visit_date
-                                            ? \Carbon\Carbon::parse($patient->last_visit_date)->format('d M Y')
-                                            : '—' }}
+                                            {{ $patient->last_visit_date ?
+                                            \Carbon\Carbon::parse($patient->last_visit_date)->format('d M Y') : '—' }}
+                                        </small>
+                                    </td>
+                                    <td class="px-4 border-0">
+                                        <small class="text-muted">
+                                            {{ $patient->first_visit_date ?
+                                            \Carbon\Carbon::parse($patient->first_visit_date)->format('d M Y') : '—' }}
                                         </small>
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted border-0">
+                                    <td colspan="10" class="text-center py-4 text-muted border-0">
                                         No patient data available.
                                     </td>
                                 </tr>
@@ -336,6 +389,15 @@
             .card {
                 box-shadow: none !important;
                 border: 1px solid #dee2e6 !important;
+            }
+
+            table {
+                font-size: 10pt !important;
+            }
+
+            th,
+            td {
+                padding: 4px !important;
             }
         }
     </style>

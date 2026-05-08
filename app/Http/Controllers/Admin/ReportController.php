@@ -42,13 +42,10 @@ class ReportController extends Controller
         $totalRescheduled   = AppointmentSummary::where('status', 'rescheduled')->count();
 
         // ── Doctor Performance (from vw_doctor_performance) ──
-        $doctorPerformance = DoctorPerformance::orderBy('total_appointments', 'desc')
-                                              ->get();
+        $doctorPerformance = DoctorPerformance::orderBy('total_appointments', 'desc')->get();
 
         // ── Patient Visit History (from vw_patient_visit_history) ──
-        $patientVisits = PatientVisitHistory::orderBy('total_visits', 'desc')
-                                            ->take(10)
-                                            ->get();
+        $patientVisits = PatientVisitHistory::orderBy('total_visits', 'desc')->get();
 
         return view('admin.reports.index', compact(
             'appointments',
