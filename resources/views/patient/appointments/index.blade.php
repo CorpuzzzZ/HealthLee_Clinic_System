@@ -3,7 +3,7 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between">
             <div>
-                <h5 class="fw-bold mb-0 text-dark">My Appointments</h5>
+                <h5 class="fw-bold mb-0 text-primary fs-3">My Appointments</h5>
                 <small class="text-muted">View and manage your appointments</small>
             </div>
             <a href="{{ route('patient.appointments.create') }}" class="btn btn-primary btn-sm rounded-pill px-3">

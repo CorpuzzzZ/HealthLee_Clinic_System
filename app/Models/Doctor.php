@@ -5,14 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Doctor extends Model
 {
     protected $fillable = [
         'user_id',
         'first_name',
-        'middle_name',
         'last_name',
         'specialty',
         'gender',
@@ -21,16 +19,6 @@ class Doctor extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function contact(): HasOne
-    {
-        return $this->hasOne(DoctorContact::class);
-    }
-
-    public function address(): HasOne
-    {
-        return $this->hasOne(DoctorAddress::class);
     }
 
     public function appointments(): HasMany
@@ -49,7 +37,18 @@ class Doctor extends Model
     }
 
     public function services(): HasMany
-{
-    return $this->hasMany(Service::class);
-}
+    {
+        return $this->hasMany(Service::class);
+    }
+
+    // Contact and address are now accessed through user
+    public function getContactNumberAttribute()
+    {
+        return $this->user->contact?->contact_number;
+    }
+
+    public function getFullAddressAttribute()
+    {
+        return $this->user->full_address;
+    }
 }

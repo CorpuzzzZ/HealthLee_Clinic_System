@@ -34,7 +34,6 @@ class User extends Authenticatable
     }
 
     // --- Role helpers ---
-
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
@@ -51,7 +50,6 @@ class User extends Authenticatable
     }
 
     // --- Relationships ---
-
     public function admin(): HasOne
     {
         return $this->hasOne(Admin::class);
@@ -67,10 +65,41 @@ class User extends Authenticatable
         return $this->hasOne(Doctor::class);
     }
 
-    
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
 
-public function notifications(): HasMany
-{
-    return $this->hasMany(Notification::class);
-}
+    // --- Contact & Address Relationships ---
+    public function contact(): HasOne
+    {
+        return $this->hasOne(UserContact::class);
+    }
+
+    public function address(): HasOne
+    {
+        return $this->hasOne(UserAddress::class);
+    }
+
+    // --- Helper Accessors ---
+    public function getContactNumberAttribute(): ?string
+    {
+        return $this->contact?->contact_number;
+    }
+
+    public function getFullAddressAttribute(): ?string
+    {
+        $addr = $this->address;
+        if (!$addr) {
+            return null;
+        }
+        
+        return implode(', ', array_filter([
+            $addr->street,
+            $addr->barangay,
+            $addr->city,
+            $addr->province,
+            $addr->zip_code
+        ]));
+    }
 }

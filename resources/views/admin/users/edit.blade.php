@@ -123,10 +123,8 @@
                                 <label class="form-label fw-semibold">Contact Number <span
                                         class="text-danger">*</span></label>
                                 @php
-                                $contactNumber = old('contact_number',
-                                $profile?->contact->contact_number // patient/doctor (normalized)
-                                ?? $profile?->contact_number // admin (flat)
-                                );
+                                // Contact is now centralized in user->contact
+                                $contactNumber = old('contact_number', $user->contact->contact_number ?? '');
                                 @endphp
                                 <input type="text" name="contact_number" value="{{ $contactNumber }}"
                                     class="form-control @error('contact_number') is-invalid @enderror" required>
@@ -350,12 +348,13 @@
                         <p class="fw-semibold text-muted mb-3">Address</p>
 
                         @php
-                        $addr = $profile?->address ?? $profile;
+                        // Address is now centralized in user->address
+                        $address = $user->address;
                         @endphp
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Street</label>
-                            <input type="text" name="street" value="{{ old('street', $addr?->street) }}"
+                            <input type="text" name="street" value="{{ old('street', $address?->street) }}"
                                 class="form-control @error('street') is-invalid @enderror">
                             @error('street') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
@@ -363,13 +362,13 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Barangay</label>
-                                <input type="text" name="barangay" value="{{ old('barangay', $addr?->barangay) }}"
+                                <input type="text" name="barangay" value="{{ old('barangay', $address?->barangay) }}"
                                     class="form-control @error('barangay') is-invalid @enderror">
                                 @error('barangay') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">City</label>
-                                <input type="text" name="city" value="{{ old('city', $addr?->city) }}"
+                                <input type="text" name="city" value="{{ old('city', $address?->city) }}"
                                     class="form-control @error('city') is-invalid @enderror">
                                 @error('city') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
@@ -378,13 +377,13 @@
                         <div class="row g-3 mb-4">
                             <div class="col-md-8">
                                 <label class="form-label fw-semibold">Province</label>
-                                <input type="text" name="province" value="{{ old('province', $addr?->province) }}"
+                                <input type="text" name="province" value="{{ old('province', $address?->province) }}"
                                     class="form-control @error('province') is-invalid @enderror">
                                 @error('province') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Zip Code</label>
-                                <input type="text" name="zip_code" value="{{ old('zip_code', $addr?->zip_code) }}"
+                                <input type="text" name="zip_code" value="{{ old('zip_code', $address?->zip_code) }}"
                                     class="form-control @error('zip_code') is-invalid @enderror">
                                 @error('zip_code') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>

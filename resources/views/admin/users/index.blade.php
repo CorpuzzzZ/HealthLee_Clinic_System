@@ -3,7 +3,7 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between">
             <div>
-                <h5 class="fw-bold mb-0 text-dark">Manage Users</h5>
+                <h5 class="fw-bold mb-0 text-primary fs-3">Manage Users</h5>
                 <small class="text-muted">All registered accounts in the system</small>
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -103,6 +103,7 @@
                             <th class="px-4 py-3 text-muted fw-normal small border-0">#</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Name</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Email</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Contact</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Registered</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Actions</th>
                         </tr>
@@ -123,6 +124,9 @@
                                 </div>
                             </td>
                             <td class="px-4 border-0"><small class="text-muted">{{ $user->email }}</small></td>
+                            <td class="px-4 border-0">
+                                <small class="text-muted">{{ $user->contact->contact_number ?? '—' }}</small>
+                            </td>
                             <td class="px-4 border-0"><small class="text-muted">{{ $user->created_at->format('d M Y')
                                     }}</small></td>
                             <td class="px-4 border-0 text-center">
@@ -210,6 +214,7 @@
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Name</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Email</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Specialty</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Contact</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Services</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Registered</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Actions</th>
@@ -235,6 +240,9 @@
                                 <small class="text-muted">
                                     {{ $user->doctor?->specialty ?? '—' }}
                                 </small>
+                            </td>
+                            <td class="px-4 border-0">
+                                <small class="text-muted">{{ $user->contact->contact_number ?? '—' }}</small>
                             </td>
                             <td class="px-4 border-0">
                                 @php $svcCount = $user->doctor?->services?->count() ?? 0; @endphp
@@ -333,6 +341,7 @@
                             <th class="px-4 py-3 text-muted fw-normal small border-0">#</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Name</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Email</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Contact</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Blood Type</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Registered</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Actions</th>
@@ -354,6 +363,9 @@
                                 </div>
                             </td>
                             <td class="px-4 border-0"><small class="text-muted">{{ $user->email }}</small></td>
+                            <td class="px-4 border-0">
+                                <small class="text-muted">{{ $user->contact->contact_number ?? '—' }}</small>
+                            </td>
                             <td class="px-4 border-0">
                                 @if($user->patient?->blood_type)
                                 <span class="badge rounded-pill px-2 py-1"

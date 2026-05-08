@@ -19,42 +19,54 @@
     <style>
         :root {
             --primary-blue: #0d6efd;
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #4a5568;
+            --sidebar-hover-bg: #e7f1ff;
+            --sidebar-hover-text: #0d6efd;
+            --sidebar-active-bg: #0d6efd;
+            --sidebar-active-text: #ffffff;
         }
 
         /* ── Sidebar ── */
         .sidebar {
-            background: linear-gradient(180deg, #1a2535 0%, #0f1826 100%);
-            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+            background: var(--sidebar-bg);
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.05);
             width: 260px;
             z-index: 1040;
+            border-right: 1px solid #e9ecef;
         }
 
         .sidebar .nav-link {
-            color: #a8b5c8;
-            padding: 14px 24px;
-            border-radius: 8px;
-            margin: 6px 12px;
+            color: var(--sidebar-text);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin: 4px 12px;
             font-weight: 500;
             transition: all 0.25s ease;
             display: flex;
-            /* add this */
             align-items: center;
+            gap: 10px;
         }
 
-        .sidebar .nav-link:hover,
+        .sidebar .nav-link:hover {
+            background: var(--sidebar-hover-bg);
+            color: var(--sidebar-hover-text);
+            transform: translateX(4px);
+        }
+
         .sidebar .nav-link.active {
-            background: var(--primary-blue);
-            color: white;
-            transform: translateX(6px);
+            background: var(--sidebar-active-bg);
+            color: var(--sidebar-active-text);
+            box-shadow: 0 2px 6px rgba(13, 110, 253, 0.2);
         }
 
         .sidebar .nav-link i {
-            width: 26px;
-            font-size: 1.15rem;
+            width: 24px;
+            font-size: 1.1rem;
         }
 
         .brand-logo {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
             letter-spacing: -0.5px;
         }
@@ -69,20 +81,41 @@
         /* ── Top Navbar ── */
         .top-navbar {
             background: white;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             border-bottom: 1px solid #e9ecef;
         }
 
         .user-badge {
-            font-size: 0.85rem;
-            padding: 6px 14px;
-            border-radius: 50px;
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #e7f1ff !important;
+            color: #0d6efd !important;
         }
 
         /* ── Logout ── */
         .logout-section {
             margin-top: auto;
             padding: 20px 16px 24px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .logout-section .nav-link {
+            color: #dc3545 !important;
+        }
+
+        .logout-section .nav-link:hover {
+            background: #fdecea !important;
+            color: #dc3545 !important;
+        }
+
+        /* ── Sidebar User Info ── */
+        .sidebar-user-info {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .sidebar-user-name {
+            color: #1a202c;
         }
 
         /* ── Responsive ── */
@@ -108,12 +141,13 @@
     <div class="d-flex">
 
         <!-- ==================== SIDEBAR ==================== -->
-        <div class="sidebar text-white vh-100 position-fixed overflow-auto shadow d-flex flex-column" id="sidebar">
+        <div class="sidebar text-dark vh-100 position-fixed overflow-auto shadow-lg d-flex flex-column rounded-4"
+            id="sidebar">
             <div class="p-4 flex-grow-1">
 
                 <!-- Branding -->
-                <a href="{{ route('dashboard') }}" class="d-block text-decoration-none mb-5">
-                    <h4 class="brand-logo text-white mb-0">
+                <a href="{{ route('dashboard') }}" class="d-block text-decoration-none mb-4">
+                    <h4 class="brand-logo text-primary mb-0">
                         <i class="bi bi-heart-pulse-fill text-primary me-2"></i>
                         HealthLee
                     </h4>
@@ -121,9 +155,9 @@
                 </a>
 
                 {{-- User Info --}}
-                <div class="mb-5 pb-4 border-bottom border-secondary">
-                    <small class="opacity-75 d-block mb-1">Logged in as</small>
-                    <strong class="d-block text-white fs-6">
+                <div class="mb-4 pb-3 sidebar-user-info border-top pt-3">
+
+                    <strong class="d-block text-primary fs-6 sidebar-user-name">
                         @if(Auth::user()->role === 'admin' && Auth::user()->admin)
                         {{ Auth::user()->admin->first_name }} {{ Auth::user()->admin->last_name }}
                         @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
@@ -134,7 +168,7 @@
                         {{ Auth::user()->email }}
                         @endif
                     </strong>
-                    <span class="badge user-badge bg-primary mt-2">
+                    <span class="badge user-badge mt-2">
                         {{ ucfirst(Auth::user()->role) }}
                     </span>
                 </div>
@@ -145,13 +179,13 @@
             </div>
 
             <!-- Logout -->
-            <div class="logout-section border-top border-secondary">
+            <div class="logout-section">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit"
-                        class="nav-link text-white w-100 text-start p-3 border-0 bg-transparent rounded-3 d-flex align-items-center">
+                        class="nav-link w-100 text-start p-3 border-0 bg-transparent rounded-3 d-flex align-items-center">
                         <i class="bi bi-box-arrow-right me-3 fs-5"></i>
-                        <span class="fw-medium"><small>Logout</small></span>
+                        <span class="fw-medium">Logout</span>
                     </button>
                 </form>
             </div>
@@ -161,37 +195,77 @@
         <div class="flex-grow-1 main-content">
 
             <!-- Top Navbar -->
-            <nav class="top-navbar navbar py-3">
-                <div class="container-fluid px-4">
+            {{-- <nav class="card border-0 shadow-sm mx-3 mt-3" style="border-radius: 12px; background: white;">
+                <div class="card-body px-4 py-3">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <!-- Mobile sidebar toggle -->
+                        <button class="btn btn-link text-dark d-lg-none me-auto p-0" id="sidebarToggle"
+                            style="font-size: 1.5rem;">
+                            <i class="bi bi-list"></i>
+                        </button>
 
-                    <!-- Mobile sidebar toggle -->
-                    <button class="btn btn-link text-dark d-lg-none me-3 p-0" id="sidebarToggle">
-                        <i class="bi bi-list fs-3"></i>
-                    </button>
-
-                    <div class="ms-auto d-flex align-items-center gap-3">
-                        <span class="text-muted small d-none d-md-inline">
+                        <span class="text-muted small">
+                            <i class="bi bi-calendar3 me-1"></i>
                             {{ now()->format('l, d F Y') }}
                         </span>
-                        <span class="text-dark fw-medium">
-                            @if(Auth::user()->role === 'admin' && Auth::user()->admin)
-                            {{ Auth::user()->admin->first_name }} {{ Auth::user()->admin->last_name }}
-                            @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
-                            Dr. {{ Auth::user()->doctor->first_name }} {{ Auth::user()->doctor->last_name }}
-                            @elseif(Auth::user()->role === 'patient' && Auth::user()->patient)
-                            {{ Auth::user()->patient->first_name }} {{ Auth::user()->patient->last_name }}
-                            @else
-                            {{ Auth::user()->email }}
-                            @endif
-                        </span>
+
+                        <div class="vr text-muted"></div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-link text-decoration-none d-flex align-items-center gap-2 p-0"
+                                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white"
+                                    style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                    @if(Auth::user()->role === 'admin' && Auth::user()->admin)
+                                    {{ strtoupper(substr(Auth::user()->admin->first_name, 0, 1)) }}
+                                    @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
+                                    {{ strtoupper(substr(Auth::user()->doctor->first_name, 0, 1)) }}
+                                    @elseif(Auth::user()->role === 'patient' && Auth::user()->patient)
+                                    {{ strtoupper(substr(Auth::user()->patient->first_name, 0, 1)) }}
+                                    @else
+                                    {{ strtoupper(substr(Auth::user()->email, 0, 1)) }}
+                                    @endif
+                                </div>
+                                <span class="text-dark fw-medium">
+                                    @if(Auth::user()->role === 'admin' && Auth::user()->admin)
+                                    {{ Auth::user()->admin->first_name }} {{ Auth::user()->admin->last_name }}
+                                    @elseif(Auth::user()->role === 'doctor' && Auth::user()->doctor)
+                                    Dr. {{ Auth::user()->doctor->first_name }} {{ Auth::user()->doctor->last_name }}
+                                    @elseif(Auth::user()->role === 'patient' && Auth::user()->patient)
+                                    {{ Auth::user()->patient->first_name }} {{ Auth::user()->patient->last_name }}
+                                    @else
+                                    {{ Auth::user()->email }}
+                                    @endif
+                                </span>
+                                <i class="bi bi-chevron-down text-muted small"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 mt-2">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('profile.edit') }}">
+                                        <i class="bi bi-person me-2"></i> Profile Settings
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </nav>
+            </nav> --}}
 
             <!-- Page Heading -->
             @isset($header)
             <div class="px-4 pt-3">
-                <div class="bg-white rounded-3 shadow-sm px-4 py-3 border-start border-primary border-4">
+                <div class="bg-white rounded-4 shadow-lg px-4 py-3 border-start">
                     {{ $header }}
                 </div>
             </div>

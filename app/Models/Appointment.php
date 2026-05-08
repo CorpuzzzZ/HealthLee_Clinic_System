@@ -16,9 +16,7 @@ class Appointment extends Model
         'appointment_time',
         'status',
         'notes',
-        'reschedule_notes',
-    'proposed_date', 
-    'proposed_time', 
+        
        
     ];
 
@@ -44,7 +42,7 @@ class Appointment extends Model
         return $this->hasOne(MedicalRecord::class);
     }
 
-    // In app/Models/Appointment.php
+    
 
 
 

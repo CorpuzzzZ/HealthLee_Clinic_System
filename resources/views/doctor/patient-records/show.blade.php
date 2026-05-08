@@ -76,13 +76,14 @@
                             <div class="col-6">
                                 <div class="p-2 rounded-3" style="background: #f8f9fa;">
                                     <small class="text-muted d-block mb-1">Age</small>
-                                    <span class="fw-medium small">{{ $patient->age ?? '—' }}</span>
+                                    <span class="fw-medium small">{{ $patient->birthdate?->age ?? '—' }}</span>
                                 </div>
                             </div>
                             <div class="col-12">
                                 <div class="p-2 rounded-3" style="background: #f8f9fa;">
                                     <small class="text-muted d-block mb-1">Contact</small>
-                                    <span class="fw-medium small">{{ $patient->contact_number ?? '—' }}</span>
+                                    <span class="fw-medium small">{{ $patient->user->contact->contact_number ?? '—'
+                                        }}</span>
                                 </div>
                             </div>
                         </div>
@@ -229,7 +230,9 @@
                     <div class="px-4 py-3 border-bottom">
                         <div class="d-flex align-items-center justify-content-between mb-1">
                             <span class="fw-medium small">
-                                Dr. {{ $record->doctor->first_name }} {{ $record->doctor->last_name }}
+                                {{-- FIXED: Access doctor through appointment relationship --}}
+                                Dr. {{ $record->appointment->doctor->first_name ?? '—' }} {{
+                                $record->appointment->doctor->last_name ?? '—' }}
                             </span>
                             <small class="text-muted">{{ $record->created_at->format('d M Y') }}</small>
                         </div>

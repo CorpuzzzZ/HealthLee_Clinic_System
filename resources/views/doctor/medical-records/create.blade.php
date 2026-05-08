@@ -236,11 +236,11 @@
                 const time    = $(el).data('time');
                 const service = $(el).data('service');
 
-                const initials = patient.split(' ')
+                const initials = patient ? patient.split(' ')
                                         .map(n => n[0])
                                         .join('')
                                         .substring(0, 2)
-                                        .toUpperCase();
+                                        .toUpperCase() : 'PT';
 
                 return $(`
                     <div class="d-flex align-items-center gap-2 py-1">
@@ -249,10 +249,10 @@
                             ${initials}
                         </div>
                         <div>
-                            <div style="font-size:0.875rem;font-weight:500;">${patient}</div>
+                            <div style="font-size:0.875rem;font-weight:500;">${patient || 'Unknown Patient'}</div>
                             <div style="font-size:0.75rem;color:#6c757d;">
-                                ${date} · ${time}
-                                ${service !== 'No service' ? ' · ' + service : ''}
+                                ${date || ''} · ${time || ''}
+                                ${service && service !== 'No service' ? ' · ' + service : ''}
                             </div>
                         </div>
                     </div>

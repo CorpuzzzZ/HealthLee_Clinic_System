@@ -3,7 +3,7 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between">
             <div>
-                <h5 class="fw-bold mb-0 text-dark">Admin Dashboard</h5>
+                <h5 class="fw-bold mb-0 text-primary fs-3">Admin Dashboard</h5>
                 <small class="text-muted">Welcome back, {{ Auth::user()->admin->first_name ?? 'Admin' }}!</small>
             </div>
             <span class="text-muted small">{{ now()->format('l, d F Y') }}</span>

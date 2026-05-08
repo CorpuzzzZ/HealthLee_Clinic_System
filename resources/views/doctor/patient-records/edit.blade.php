@@ -44,8 +44,8 @@
                             </div>
                             <small class="text-muted">
                                 {{ ucfirst($patient->gender ?? '—') }},
-                                {{ $patient->age ?? '—' }} yrs
-                                &bull; {{ $patient->contact_number ?? '—' }}
+                                {{ $patient->birthdate?->age ?? '—' }} yrs
+                                &bull; {{ $patient->user->contact->contact_number ?? '—' }}
                             </small>
                         </div>
                     </div>

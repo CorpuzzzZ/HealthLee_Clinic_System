@@ -20,7 +20,6 @@
     'completed' => 'background: #e8f5ee; color: #198754;',
     'cancelled' => 'background: #fdecea; color: #dc3545;',
     'rescheduled' => 'background: #f3e8ff; color: #7c3aed;',
-    'reschedule_requested' => 'background: #fff3e0; color: #fd7e14;',
     ];
     $statusIcons = [
     'pending' => 'bi-clock',
@@ -28,7 +27,6 @@
     'completed' => 'bi-check-circle-fill',
     'cancelled' => 'bi-x-circle',
     'rescheduled' => 'bi-arrow-repeat',
-    'reschedule_requested' => 'bi-calendar2-week',
     ];
     $startTime = \Carbon\Carbon::parse($appointment->appointment_time);
     $endTime = $startTime->copy()->addHour();
@@ -37,20 +35,11 @@
     $isPastDate = \Carbon\Carbon::parse($appointment->appointment_date)->isPast();
     $isToday = \Carbon\Carbon::parse($appointment->appointment_date)->isToday();
 
-    // Check if this is a reschedule request
-    $isRescheduleRequest = $appointment->status === 'reschedule_requested';
-
     // Determine available status options based on current status
     $availableStatuses = [];
     switch($appointment->status) {
     case 'pending':
     $availableStatuses = ['confirmed' => 'Confirmed'];
-    break;
-    case 'reschedule_requested':
-    $availableStatuses = [
-    'confirmed' => 'Approve Reschedule',
-    'cancelled' => 'Reject & Cancel',
-    ];
     break;
     case 'confirmed':
     $options = [];
@@ -60,7 +49,7 @@
     $completedDisabled = true;
     }
     $options['cancelled'] = 'Cancelled';
-    $options['rescheduled'] = 'Reschedule (by doctor)';
+    $options['rescheduled'] = 'Rescheduled';
     $availableStatuses = $options;
     break;
     default:
@@ -88,13 +77,7 @@
                         </div>
                         <div>
                             <div class="text-muted small">Appointment Status</div>
-                            <div class="fw-bold fs-5">
-                                @if($appointment->status === 'reschedule_requested')
-                                Reschedule Requested
-                                @else
-                                {{ ucfirst($appointment->status) }}
-                                @endif
-                            </div>
+                            <div class="fw-bold fs-5">{{ ucfirst($appointment->status) }}</div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-4 flex-wrap">
@@ -159,22 +142,15 @@
                             <div class="p-3 rounded-3" style="background: #f8f9fa;">
                                 <small class="text-muted d-block mb-1">Contact</small>
                                 <span class="fw-medium small">
-                                    {{ $appointment->patient->contact->contact_number
-                                    ?? $appointment->patient->contact_number
-                                    ?? '—' }}
+                                    {{ $appointment->patient->user->contact->contact_number ?? '—' }}
                                 </span>
                             </div>
                         </div>
-                        @if($appointment->notes || $appointment->reschedule_notes)
+                        @if($appointment->notes)
                         <div class="col-12">
                             <div class="p-3 rounded-3" style="background: #f8f9fa;">
-                                @if($appointment->reschedule_notes)
-                                <small class="text-muted d-block mb-1">Reschedule Request Notes</small>
-                                <span class="fw-medium small text-warning">{{ $appointment->reschedule_notes }}</span>
-                                @elseif($appointment->notes)
                                 <small class="text-muted d-block mb-1">Appointment Notes</small>
                                 <span class="fw-medium small">{{ $appointment->notes }}</span>
-                                @endif
                             </div>
                         </div>
                         @endif
@@ -247,16 +223,6 @@
                         <small>Please contact support if you need to change this appointment.</small>
                     </div>
                     @else
-
-                    @if($isRescheduleRequest)
-                    <div class="mb-4">
-                        <div class="alert alert-warning rounded-3 border-0 mb-3" style="background: #fff3e0;">
-                            <i class="bi bi-calendar2-week me-2 text-warning"></i>
-                            <strong>Patient requested to reschedule this appointment.</strong><br>
-                            <small>Please review the request and choose to approve or reject it.</small>
-                        </div>
-                    </div>
-                    @else
                     <div class="mb-4">
                         <div class="alert alert-info rounded-3 border-0 mb-3" style="background: #e7f1ff;">
                             <i class="bi bi-info-circle-fill me-2 text-primary"></i>
@@ -277,7 +243,6 @@
                             @endif
                         </div>
                     </div>
-                    @endif
 
                     <form method="POST" action="{{ route('doctor.appointments.status', $appointment) }}">
                         @csrf
@@ -333,7 +298,6 @@
                         <i class="bi bi-eye me-1"></i> View Record
                     </a>
                     @else
-                    {{-- ✅ Pass appointment_id so the create form pre-selects this patient --}}
                     <a href="{{ route('doctor.medical-records.create', ['appointment_id' => $appointment->id]) }}"
                         class="btn btn-sm btn-success rounded-3 px-3">
                         <i class="bi bi-plus-lg me-1"></i> Add Record

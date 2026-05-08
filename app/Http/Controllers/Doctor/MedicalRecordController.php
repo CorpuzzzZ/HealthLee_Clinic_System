@@ -20,20 +20,23 @@ class MedicalRecordController extends Controller
     {
         $doctor = $this->getDoctor();
 
-        $query = MedicalRecord::with(['patient', 'appointment'])
-            ->where('doctor_id', $doctor->id)
+        $query = MedicalRecord::with(['appointment.patient', 'appointment'])
+            ->whereHas('appointment', function ($q) use ($doctor) {
+                $q->where('doctor_id', $doctor->id);
+            })
             ->orderBy('created_at', 'desc');
 
-        // Search by patient name
         if ($request->filled('search')) {
-            $query->whereHas('patient', function ($q) use ($request) {
+            $query->whereHas('appointment.patient', function ($q) use ($request) {
                 $q->where('first_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('last_name',  'like', '%' . $request->search . '%');
+                  ->orWhere('last_name', 'like', '%' . $request->search . '%');
             });
         }
 
-        $records  = $query->paginate(10)->withQueryString();
-        $total    = MedicalRecord::where('doctor_id', $doctor->id)->count();
+        $records = $query->paginate(10)->withQueryString();
+        $total = MedicalRecord::whereHas('appointment', function ($q) use ($doctor) {
+            $q->where('doctor_id', $doctor->id);
+        })->count();
 
         return view('doctor.medical-records.index', compact('records', 'total', 'doctor'));
     }
@@ -49,7 +52,6 @@ class MedicalRecordController extends Controller
             ->orderBy('appointment_date', 'desc')
             ->get();
 
-        // Pre-select appointment if coming from the appointment show page
         $preselectedAppointment = null;
         if ($request->filled('appointment_id')) {
             $preselectedAppointment = $appointments
@@ -73,37 +75,37 @@ class MedicalRecordController extends Controller
         ]);
 
         $appointment = Appointment::findOrFail($request->appointment_id);
+        
+        abort_if($appointment->doctor_id !== $this->getDoctor()->id, 403);
 
         MedicalRecord::create([
-            'patient_id'     => $appointment->patient_id,
             'appointment_id' => $appointment->id,
-            'doctor_id'      => $this->getDoctor()->id,
             'diagnosis'      => $request->diagnosis,
             'treatment'      => $request->treatment,
             'notes'          => $request->notes,
         ]);
 
         return redirect()->route('doctor.medical-records.index')
-                         ->with('success', 'Medical record added successfully.');
+            ->with('success', 'Medical record added successfully.');
     }
 
     public function show(MedicalRecord $medicalRecord)
     {
-        abort_if($medicalRecord->doctor_id !== $this->getDoctor()->id, 403);
-        $medicalRecord->load(['patient', 'doctor', 'appointment']);
+        abort_if($medicalRecord->appointment->doctor_id !== $this->getDoctor()->id, 403);
+        $medicalRecord->load(['appointment.patient', 'appointment']);
         return view('doctor.medical-records.show', compact('medicalRecord'));
     }
 
     public function edit(MedicalRecord $medicalRecord)
     {
-        abort_if($medicalRecord->doctor_id !== $this->getDoctor()->id, 403);
-        $medicalRecord->load(['patient', 'appointment']);
+        abort_if($medicalRecord->appointment->doctor_id !== $this->getDoctor()->id, 403);
+        $medicalRecord->load(['appointment.patient', 'appointment']);
         return view('doctor.medical-records.edit', compact('medicalRecord'));
     }
 
     public function update(Request $request, MedicalRecord $medicalRecord)
     {
-        abort_if($medicalRecord->doctor_id !== $this->getDoctor()->id, 403);
+        abort_if($medicalRecord->appointment->doctor_id !== $this->getDoctor()->id, 403);
 
         $request->validate([
             'diagnosis' => ['required', 'string'],
@@ -118,6 +120,6 @@ class MedicalRecordController extends Controller
         ]);
 
         return redirect()->route('doctor.medical-records.index')
-                         ->with('success', 'Medical record updated successfully.');
+            ->with('success', 'Medical record updated successfully.');
     }
 }

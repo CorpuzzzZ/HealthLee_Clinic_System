@@ -19,9 +19,10 @@ class AvailabilityController extends Controller
     {
         $doctor = $this->getDoctor();
 
+        // Order by most recent dates first (descending)
         $availabilities = $doctor->availabilities()
-                                 ->orderBy('available_date')
-                                 ->orderBy('start_time')
+                                 ->orderBy('available_date', 'desc')
+                                 ->orderBy('start_time', 'asc')
                                  ->paginate(10);
 
         $upcomingCount = $doctor->availabilities()
@@ -56,14 +57,8 @@ class AvailabilityController extends Controller
         ]);
 
         $doctor = $this->getDoctor();
-        $start  = Carbon::createFromFormat('H:i', $request->start_time);
-        $end    = Carbon::createFromFormat('H:i', $request->end_time);
-
-        // ── Must be at least 1 hour to fit a slot ──
-        if ($start->copy()->addHour()->gt($end)) {
-            session()->flash('_add_error', 'The availability window must be at least 1 hour long (each appointment is 1 hour).');
-            return back()->withInput();
-        }
+        
+        // Removed the 1-hour minimum restriction - doctors can set any duration
 
         // ── Check for overlapping slots on the same date ──
         $overlap = Availability::where('doctor_id', $doctor->id)
@@ -102,18 +97,8 @@ class AvailabilityController extends Controller
         ]);
 
         $doctor = $this->getDoctor();
-        $start  = Carbon::createFromFormat('H:i', $request->start_time);
-        $end    = Carbon::createFromFormat('H:i', $request->end_time);
-
-        // ── Must be at least 1 hour to fit a slot ──
-        if ($start->copy()->addHour()->gt($end)) {
-            session()->flash('_edit_slot_id', $availability->id);
-            session()->flash('_edit_date',    $request->available_date);
-            session()->flash('_edit_start',   $request->start_time);
-            session()->flash('_edit_end',     $request->end_time);
-            session()->flash('_edit_error',   'The availability window must be at least 1 hour long (each appointment is 1 hour).');
-            return back()->withInput();
-        }
+        
+        // Removed the 1-hour minimum restriction - doctors can set any duration
 
         // ── Check for overlapping slots on the same date (exclude current slot) ──
         $overlap = Availability::where('doctor_id', $doctor->id)

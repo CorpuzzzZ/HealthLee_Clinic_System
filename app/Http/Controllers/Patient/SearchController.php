@@ -11,7 +11,7 @@ class SearchController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Doctor::with(['availabilities'])
+        $query = Doctor::with(['availabilities', 'user.contact', 'user.address'])
                        ->orderBy('last_name');
 
         // Search by name
@@ -44,26 +44,27 @@ class SearchController extends Controller
     }
 
     public function show(Doctor $doctor)
-{
-    $doctor->load(['availabilities', 'contact', 'address']);
+    {
+        // FIXED: Load user.contact and user.address instead of contact and address
+        $doctor->load(['availabilities', 'user.contact', 'user.address']);
 
-    // Only future availability slots
-    $availabilities = $doctor->availabilities()
+        // Only future availability slots
+        $availabilities = $doctor->availabilities()
                              ->whereDate('available_date', '>=', today())
                              ->orderBy('available_date')
                              ->orderBy('start_time')
                              ->get();
 
-    // Build booked times as "date_HH:mm" keys for easy lookup in the view
-    $bookedTimes = \App\Models\Appointment::where('doctor_id', $doctor->id)
-        ->whereDate('appointment_date', '>=', today())
-        ->whereNotIn('status', ['cancelled'])
-        ->get()
-        ->map(fn($a) => \Carbon\Carbon::parse($a->available_date ?? $a->appointment_date)->format('Y-m-d')
-                      . '_'
-                      . \Carbon\Carbon::parse($a->appointment_time)->format('H:i'))
-        ->toArray();
+        // Build booked times as "date_HH:mm" keys for easy lookup in the view
+        $bookedTimes = \App\Models\Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('appointment_date', '>=', today())
+            ->whereNotIn('status', ['cancelled'])
+            ->get()
+            ->map(fn($a) => \Carbon\Carbon::parse($a->appointment_date)->format('Y-m-d')
+                          . '_'
+                          . \Carbon\Carbon::parse($a->appointment_time)->format('H:i'))
+            ->toArray();
 
-    return view('patient.doctors.show', compact('doctor', 'availabilities', 'bookedTimes'));
-}
+        return view('patient.doctors.show', compact('doctor', 'availabilities', 'bookedTimes'));
+    }
 }

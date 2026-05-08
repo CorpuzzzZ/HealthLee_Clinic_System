@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Admin extends Model
 {
@@ -21,13 +20,14 @@ class Admin extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function contact(): HasOne
+    // Contact and address are now accessed through user
+    public function getContactNumberAttribute()
     {
-        return $this->hasOne(AdminContact::class);
+        return $this->user->contact?->contact_number;
     }
 
-    public function address(): HasOne
+    public function getFullAddressAttribute()
     {
-        return $this->hasOne(AdminAddress::class);
+        return $this->user->full_address;
     }
 }

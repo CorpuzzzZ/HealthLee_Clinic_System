@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Patient;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -30,8 +31,11 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        // Notifications (placeholder until Notification model is built)
-        $notifications = collect();
+        // Fetch actual notifications for the logged-in user
+        $notifications = Notification::where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
 
         // Total counts
         $totalAppointments = Appointment::where('patient_id', $patient->id)->count();

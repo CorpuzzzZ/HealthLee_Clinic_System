@@ -3,7 +3,7 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between">
             <div>
-                <h5 class="fw-bold mb-0 text-dark">Patient Records</h5>
+                <h5 class="fw-bold mb-0 text-primary fs-3">Patient Records</h5>
                 <small class="text-muted">View and manage patient medical information</small>
             </div>
             <span class="badge rounded-pill bg-primary px-3 py-2">

@@ -39,9 +39,11 @@ class DashboardController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        // Recent medical records
-        $recentMedicalRecords = MedicalRecord::with('patient')
-            ->where('doctor_id', $doctor->id)
+        // Recent medical records - FIXED: Use appointment relationship
+        $recentMedicalRecords = MedicalRecord::with(['appointment.patient'])
+            ->whereHas('appointment', function ($query) use ($doctor) {
+                $query->where('doctor_id', $doctor->id);
+            })
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();

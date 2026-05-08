@@ -28,11 +28,16 @@ class PatientRecordController extends Controller
         return view('admin.patient-records.index', compact('patients'));
     }
 
-    public function show(Patient $patient)
-    {
-        $patient->load(['user', 'appointments.doctor', 'medicalRecords.doctor']);
-        return view('admin.patient-records.show', compact('patient'));
-    }
+   public function show(Patient $patient)
+{
+    $patient->load([
+        'user.contact', 
+        'user.address',
+        'appointments.doctor',
+        'medicalRecords.appointment.doctor'
+    ]);
+    return view('admin.patient-records.show', compact('patient'));
+}
 
     public function edit(Patient $patient)
     {

@@ -3,7 +3,7 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between">
             <div>
-                <h5 class="fw-bold mb-0 text-dark">Reports</h5>
+                <h5 class="fw-bold mb-0 text-primary fs-3">Reports</h5>
                 <small class="text-muted">System analytics and data summaries</small>
             </div>
             <button onclick="window.print()" class="btn btn-outline-secondary btn-sm rounded-pill px-3">

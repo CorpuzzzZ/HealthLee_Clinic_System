@@ -25,6 +25,7 @@
             <i class="bi bi-graph-up me-2"></i> <small>Reports</small>
         </a>
     </li>
+
     @elseif(Auth::user()->role === 'patient')
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('patient.dashboard') ? 'active' : '' }}"
@@ -32,7 +33,6 @@
             <i class="bi bi-house-door me-2"></i> <small>Dashboard</small>
         </a>
     </li>
-    {{-- These will be enabled once the modules are built --}}
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('patient.appointments.*') ? 'active' : '' }}"
             href="{{ route('patient.appointments.index') }}">
@@ -57,11 +57,6 @@
             @endif
         </a>
     </li>
-    {{-- <li class="nav-item">
-        <a class="nav-link disabled text-secondary" style="opacity: 0.5; cursor: not-allowed;">
-            <i class="bi bi-graph-up me-2"></i> <small>Reports</small>
-        </a>
-    </li> --}}
 
     @elseif(Auth::user()->role === 'doctor')
     <li class="nav-item">
@@ -76,11 +71,17 @@
             <i class="bi bi-clock-history me-2"></i> <small>My Availability</small>
         </a>
     </li>
-    {{-- These will be enabled once the modules are built --}}
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('doctor.appointments.*') ? 'active' : '' }}"
             href="{{ route('doctor.appointments.index') }}">
-            <i class="bi bi-calendar-event me-2"></i> <small>Appointments</small>
+            <i class="bi bi-calendar-event me-2"></i>
+            <small>Appointments</small>
+            @if(isset($pendingAppointmentsCount) && $pendingAppointmentsCount > 0)
+            <span class="badge rounded-pill ms-auto"
+                style="background: #dc3545; font-size: 0.65rem; padding: 3px 7px; animation: pulse 1.5s infinite;">
+                {{ $pendingAppointmentsCount > 99 ? '99+' : $pendingAppointmentsCount }}
+            </span>
+            @endif
         </a>
     </li>
     <li class="nav-item">
@@ -101,18 +102,32 @@
             @endif
         </a>
     </li>
-    <li class="nav-item">
+    {{-- <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('doctor.patient-records.*') ? 'active' : '' }}"
             href="{{ route('doctor.patient-records.index') }}">
             <i class="bi bi-clipboard2-pulse me-2"></i> <small>Patient Records</small>
-        </a>
-    </li>
-    {{-- <li class="nav-item">
-        <a class="nav-link disabled text-secondary" style="opacity: 0.5; cursor: not-allowed;">
-            <i class="bi bi-graph-up me-2"></i> <small>Reports</small>
         </a>
     </li> --}}
 
     @endif
 
 </ul>
+
+<style>
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 0.8;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+</style>

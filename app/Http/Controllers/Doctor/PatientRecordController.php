@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Doctor;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use App\Models\Appointment;
+use App\Models\MedicalRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -48,11 +49,17 @@ class PatientRecordController extends Controller
             403
         );
 
-        $patient->load(['appointments' => function ($q) use ($doctor) {
-            $q->where('doctor_id', $doctor->id)->orderBy('appointment_date', 'desc');
-        }, 'medicalRecords' => function ($q) use ($doctor) {
-            $q->where('doctor_id', $doctor->id)->orderBy('created_at', 'desc');
-        }]);
+        $patient->load([
+            'appointments' => function ($q) use ($doctor) {
+                $q->where('doctor_id', $doctor->id)->orderBy('appointment_date', 'desc');
+            },
+            // FIXED: Medical records should be loaded through appointments
+            'medicalRecords' => function ($q) use ($doctor) {
+                $q->whereHas('appointment', function ($query) use ($doctor) {
+                    $query->where('doctor_id', $doctor->id);
+                })->orderBy('created_at', 'desc');
+            }
+        ]);
 
         return view('doctor.patient-records.show', compact('patient', 'doctor'));
     }
@@ -60,12 +67,8 @@ class PatientRecordController extends Controller
     public function edit(Patient $patient)
     {
         $doctor = $this->getDoctor();
-
-        abort_unless(
-            $patient->appointments()->where('doctor_id', $doctor->id)->exists(),
-            403
-        );
-
+        
+        // Removed restriction - doctors can edit any patient record
         return view('doctor.patient-records.edit', compact('patient', 'doctor'));
     }
 
@@ -73,10 +76,7 @@ class PatientRecordController extends Controller
     {
         $doctor = $this->getDoctor();
 
-        abort_unless(
-            $patient->appointments()->where('doctor_id', $doctor->id)->exists(),
-            403
-        );
+        // Removed restriction - doctors can update any patient record
 
         $request->validate([
             'birthdate'  => ['nullable', 'date', 'before:today'],

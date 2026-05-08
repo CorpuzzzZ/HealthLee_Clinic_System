@@ -3,7 +3,7 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between">
             <div>
-                <h5 class="fw-bold mb-0 text-dark">My Availability</h5>
+                <h5 class="fw-bold mb-0 text-primary fs-3">My Availability</h5>
                 <small class="text-muted">Manage your available dates and time slots</small>
             </div>
             <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal"
