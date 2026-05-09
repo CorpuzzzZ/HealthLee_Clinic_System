@@ -8,7 +8,7 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge rounded-pill bg-primary px-3 py-2">
-                    {{ $users->total() }} Total Users
+                    {{ $totalUsers }} Total Users
                 </span>
                 <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm rounded-pill px-3">
                     <i class="bi bi-person-plus me-1"></i> Add User
@@ -42,7 +42,7 @@
                             <i class="bi bi-search text-muted" style="font-size: 0.85rem;"></i>
                         </span>
                         <input type="text" name="search" value="{{ request('search') }}"
-                            class="form-control border-start-0 ps-0" placeholder="Search by email...">
+                            class="form-control border-start-0 ps-0" placeholder="Search by name or email...">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -67,9 +67,39 @@
     </div>
 
     @php
-    $admins = $users->getCollection()->where('role', 'admin');
-    $doctors = $users->getCollection()->where('role', 'doctor');
-    $patients = $users->getCollection()->where('role', 'patient');
+    // Query all users for role separation (not just current page)
+    $allUsersQuery = \App\Models\User::with(['admin', 'patient', 'doctor', 'contact', 'address']);
+
+    // Apply search filter if present
+    if (request('search')) {
+    $allUsersQuery->where(function($q) {
+    $q->where('email', 'like', '%' . request('search') . '%')
+    ->orWhereHas('admin', function($sub) {
+    $sub->where('first_name', 'like', '%' . request('search') . '%')
+    ->orWhere('last_name', 'like', '%' . request('search') . '%');
+    })
+    ->orWhereHas('doctor', function($sub) {
+    $sub->where('first_name', 'like', '%' . request('search') . '%')
+    ->orWhere('last_name', 'like', '%' . request('search') . '%');
+    })
+    ->orWhereHas('patient', function($sub) {
+    $sub->where('first_name', 'like', '%' . request('search') . '%')
+    ->orWhere('last_name', 'like', '%' . request('search') . '%');
+    });
+    });
+    }
+
+    // Apply role filter if present
+    if (request('role')) {
+    $allUsersQuery->where('role', request('role'));
+    }
+
+    $allUsers = $allUsersQuery->orderBy('created_at', 'desc')->get();
+
+    $admins = $allUsers->where('role', 'admin');
+    $doctors = $allUsers->where('role', 'doctor');
+    $patients = $allUsers->where('role', 'patient');
+    $totalUsers = $allUsers->count();
     @endphp
 
     {{-- ── Admins Table ── --}}
@@ -96,16 +126,17 @@
                 <small>No admins found.</small>
             </div>
             @else
-            <div class="table-responsive" style="overflow:visible;">
+            <div style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr style="background:#f8f9fa;">
-                            <th class="px-4 py-3 text-muted fw-normal small border-0">#</th>
+                    <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+                        <tr>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0" style="width: 60px;">#</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Name</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Email</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Contact</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Registered</th>
-                            <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Actions</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0 text-center" style="width: 100px;">
+                                Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -206,18 +237,19 @@
                 <small>No doctors found.</small>
             </div>
             @else
-            <div class="table-responsive" style="overflow:visible;">
+            <div style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr style="background:#f8f9fa;">
-                            <th class="px-4 py-3 text-muted fw-normal small border-0">#</th>
+                    <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+                        <tr>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0" style="width: 60px;">#</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Name</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Email</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Specialty</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Contact</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Services</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Registered</th>
-                            <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Actions</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0 text-center" style="width: 100px;">
+                                Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -334,17 +366,18 @@
                 <small>No patients found.</small>
             </div>
             @else
-            <div class="table-responsive" style="overflow:visible;">
+            <div style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr style="background:#f8f9fa;">
-                            <th class="px-4 py-3 text-muted fw-normal small border-0">#</th>
+                    <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+                        <tr>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0" style="width: 60px;">#</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Name</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Email</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Contact</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Blood Type</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Registered</th>
-                            <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Actions</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0 text-center" style="width: 100px;">
+                                Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -428,16 +461,6 @@
             </div>
             @endif
         </div>
-    </div>
-    @endif
-
-    {{-- Pagination --}}
-    @if(method_exists($users, 'hasPages') && $users->hasPages())
-    <div class="d-flex align-items-center justify-content-between mt-2 px-1">
-        <small class="text-muted">
-            Showing {{ $users->firstItem() }} to {{ $users->lastItem() }} of {{ $users->total() }} users
-        </small>
-        {{ $users->links() }}
     </div>
     @endif
 

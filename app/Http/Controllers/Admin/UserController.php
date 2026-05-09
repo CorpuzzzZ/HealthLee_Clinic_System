@@ -108,20 +108,42 @@ class UserController extends Controller
 
     public function index(Request $request)
     {
+        // Build the query for all users (no pagination - for scrollable tables)
         $query = User::with(['admin', 'patient', 'doctor', 'contact', 'address'])
                      ->orderBy('created_at', 'desc');
 
+        // Apply search filter across multiple fields
         if ($request->filled('search')) {
-            $query->where('email', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('email', 'like', '%' . $search . '%')
+                  ->orWhereHas('admin', function($sub) use ($search) {
+                      $sub->where('first_name', 'like', '%' . $search . '%')
+                          ->orWhere('last_name', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('doctor', function($sub) use ($search) {
+                      $sub->where('first_name', 'like', '%' . $search . '%')
+                          ->orWhere('last_name', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('patient', function($sub) use ($search) {
+                      $sub->where('first_name', 'like', '%' . $search . '%')
+                          ->orWhere('last_name', 'like', '%' . $search . '%');
+                  });
+            });
         }
 
+        // Apply role filter if present
         if ($request->filled('role')) {
             $query->where('role', $request->role);
         }
 
-        $users = $query->paginate(10)->withQueryString();
+        // Get all users (no pagination)
+        $allUsers = $query->get();
+        
+        // Get total count for the badge
+        $totalUsers = User::count();
 
-        return view('admin.users.index', compact('users'));
+        return view('admin.users.index', compact('allUsers', 'totalUsers'));
     }
 
     public function show(User $user)
