@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Views\AppointmentSummary;
-use App\Models\Views\DoctorPerformance;
-use App\Models\Views\PatientVisitHistory;
-use App\Models\Appointment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -15,37 +12,54 @@ class ReportController extends Controller
     {
         $period = $request->get('period', 'all');
 
-        // ── Appointment Summary (from vw_appointment_summary) ──
-        $appointmentQuery = AppointmentSummary::query();
-
+        // ── Appointment Summary Query ──
+        $appointmentSql = "SELECT * FROM vw_appointment_summary ORDER BY appointment_date DESC";
+        
         if ($period === 'daily') {
-            $appointmentQuery->whereDate('appointment_date', today());
+            $appointmentSql = "SELECT * FROM vw_appointment_summary 
+                               WHERE DATE(appointment_date) = CURDATE() 
+                               ORDER BY appointment_date DESC";
         } elseif ($period === 'weekly') {
-            $appointmentQuery->whereBetween('appointment_date', [
-                now()->startOfWeek(), now()->endOfWeek()
-            ]);
+            $appointmentSql = "SELECT * FROM vw_appointment_summary 
+                               WHERE YEARWEEK(appointment_date, 1) = YEARWEEK(CURDATE(), 1) 
+                               ORDER BY appointment_date DESC";
         } elseif ($period === 'monthly') {
-            $appointmentQuery->whereMonth('appointment_date', now()->month)
-                             ->whereYear('appointment_date',  now()->year);
+            $appointmentSql = "SELECT * FROM vw_appointment_summary 
+                               WHERE MONTH(appointment_date) = MONTH(CURDATE()) 
+                               AND YEAR(appointment_date) = YEAR(CURDATE())
+                               ORDER BY appointment_date DESC";
         }
+        
+        $appointments = DB::select($appointmentSql);
+        
+        // Convert to pagination manually if needed (or use simplePaginate)
+        $perPage = 10;
+        $currentPage = request()->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+        $appointmentsPaginated = array_slice($appointments, $offset, $perPage);
+        
+        // Create a custom paginator
+        $appointments = new \Illuminate\Pagination\LengthAwarePaginator(
+            $appointmentsPaginated,
+            count($appointments),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
-        $appointments = $appointmentQuery->orderBy('appointment_date', 'desc')
-                                         ->paginate(10)
-                                         ->withQueryString();
+        // ── Appointment Status Counts (Raw SQL) ──
+        $totalAppointments = DB::select("SELECT COUNT(*) as total FROM vw_appointment_summary")[0]->total;
+        $totalCompleted = DB::select("SELECT COUNT(*) as total FROM vw_appointment_summary WHERE status = 'completed'")[0]->total;
+        $totalPending = DB::select("SELECT COUNT(*) as total FROM vw_appointment_summary WHERE status = 'pending'")[0]->total;
+        $totalCancelled = DB::select("SELECT COUNT(*) as total FROM vw_appointment_summary WHERE status = 'cancelled'")[0]->total;
+        $totalConfirmed = DB::select("SELECT COUNT(*) as total FROM vw_appointment_summary WHERE status = 'confirmed'")[0]->total;
+        $totalRescheduled = DB::select("SELECT COUNT(*) as total FROM vw_appointment_summary WHERE status = 'rescheduled'")[0]->total;
 
-        // ── Appointment Status Counts ──
-        $totalAppointments  = AppointmentSummary::count();
-        $totalCompleted     = AppointmentSummary::where('status', 'completed')->count();
-        $totalPending       = AppointmentSummary::where('status', 'pending')->count();
-        $totalCancelled     = AppointmentSummary::where('status', 'cancelled')->count();
-        $totalConfirmed     = AppointmentSummary::where('status', 'confirmed')->count();
-        $totalRescheduled   = AppointmentSummary::where('status', 'rescheduled')->count();
+        // ── Doctor Performance (Raw SQL) ──
+        $doctorPerformance = DB::select("SELECT * FROM vw_doctor_performance ORDER BY total_appointments DESC");
 
-        // ── Doctor Performance (from vw_doctor_performance) ──
-        $doctorPerformance = DoctorPerformance::orderBy('total_appointments', 'desc')->get();
-
-        // ── Patient Visit History (from vw_patient_visit_history) ──
-        $patientVisits = PatientVisitHistory::orderBy('total_visits', 'desc')->get();
+        // ── Patient Visit History (Raw SQL) ──
+        $patientVisits = DB::select("SELECT * FROM vw_patient_visit_history ORDER BY total_visits DESC");
 
         return view('admin.reports.index', compact(
             'appointments',

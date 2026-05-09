@@ -3,8 +3,8 @@
     <x-slot name="header">
         <div class="d-flex align-items-center justify-content-between">
             <div>
-                <h5 class="fw-bold mb-0 text-dark">Doctor Profile</h5>
-                <small class="text-muted">
+                <h5 class="fw-bold mb-0 text-primary fs-3">Doctor Profile</h5>
+                <small class="text-muted fw-bold">
                     Dr. {{ $doctor->first_name }} {{ $doctor->last_name }}
                 </small>
             </div>
@@ -54,28 +54,34 @@
                             <div class="col-6">
                                 <div class="p-3 rounded-3" style="background: #f8f9fa;">
                                     <small class="text-muted d-block mb-1">Contact</small>
-                                    {{-- Normalized relationship with flat fallback --}}
                                     <span class="fw-medium small">
-                                        {{ $doctor->contact->contact_number
-                                        ?? $doctor->contact_number
-                                        ?? '—' }}
+                                        {{ $doctor->user->contact->contact_number ?? '—' }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="p-3 rounded-3" style="background: #f8f9fa;">
+                                    <small class="text-muted d-block mb-1">Email</small>
+                                    <span class="fw-medium small">
+                                        {{ $doctor->user->email ?? '—' }}
                                     </span>
                                 </div>
                             </div>
                             <div class="col-12">
                                 <div class="p-3 rounded-3" style="background: #f8f9fa;">
                                     <small class="text-muted d-block mb-1">Address</small>
-                                    {{-- Normalized relationship with flat fallback --}}
                                     <span class="fw-medium small">
                                         @php
-                                        $addr = $doctor->address;
-                                        $addressStr = collect([
-                                        $addr?->barangay ?? $doctor->barangay,
-                                        $addr?->city ?? $doctor->city,
-                                        $addr?->province ?? $doctor->province,
-                                        ])->filter()->implode(', ');
+                                        $address = $doctor->user->address;
+                                        $addressParts = array_filter([
+                                        $address->street ?? null,
+                                        $address->barangay ?? null,
+                                        $address->city ?? null,
+                                        $address->province ?? null,
+                                        $address->zip_code ?? null,
+                                        ]);
                                         @endphp
-                                        {{ $addressStr ?: '—' }}
+                                        {{ !empty($addressParts) ? implode(', ', $addressParts) : '—' }}
                                     </span>
                                 </div>
                             </div>
@@ -130,6 +136,13 @@
                     {{-- Group by date --}}
                     @foreach($availabilities->groupBy(fn($slot) =>
                     \Carbon\Carbon::parse($slot->available_date)->format('Y-m-d')) as $date => $slots)
+                    @php
+                    $dateObj = \Carbon\Carbon::parse($date);
+                    // Skip past dates
+                    if ($dateObj->isPast() && !$dateObj->isToday()) {
+                    continue;
+                    }
+                    @endphp
                     <div class="mb-4">
 
                         {{-- Date Header --}}
@@ -137,10 +150,10 @@
                             <div class="rounded-3 px-3 py-2" style="background: #e7f1ff;">
                                 <span class="fw-semibold small" style="color: #0d6efd;">
                                     <i class="bi bi-calendar3 me-1"></i>
-                                    {{ \Carbon\Carbon::parse($date)->format('l, d M Y') }}
+                                    {{ $dateObj->format('l, d M Y') }}
                                 </span>
                             </div>
-                            @if(\Carbon\Carbon::parse($date)->isToday())
+                            @if($dateObj->isToday())
                             <span class="badge rounded-pill"
                                 style="background: #fff8e1; color: #e6a800; font-size: 0.7rem;">
                                 Today
