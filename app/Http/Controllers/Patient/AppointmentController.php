@@ -22,16 +22,17 @@ class AppointmentController extends Controller
     {
         $patient = $this->getPatient();
 
-        $query = Appointment::with('doctor')
+        $query = Appointment::with('doctor', 'service')
             ->where('patient_id', $patient->id)
+            ->orderByRaw("FIELD(status, 'pending', 'confirmed', 'rescheduled', 'completed', 'cancelled')")
             ->orderBy('appointment_date', 'desc');
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        $appointments   = $query->paginate(10)->withQueryString();
-        $totalUpcoming  = Appointment::where('patient_id', $patient->id)
+        $appointments = $query->paginate(10)->withQueryString();
+        $totalUpcoming = Appointment::where('patient_id', $patient->id)
                                      ->whereDate('appointment_date', '>=', today())
                                      ->whereIn('status', ['pending', 'confirmed'])
                                      ->count();
@@ -93,7 +94,7 @@ class AppointmentController extends Controller
 
                 foreach ($availabilitiesForDate as $avail) {
                     $start = Carbon::createFromFormat('H:i:s', $avail->start_time);
-                    $end   = Carbon::createFromFormat('H:i:s', $avail->end_time);
+                    $end = Carbon::createFromFormat('H:i:s', $avail->end_time);
                     
                     // Check if this specific time window is available (not just 1-hour slots)
                     $slotStart = $start->format('H:i');
@@ -124,11 +125,11 @@ class AppointmentController extends Controller
         $patient = $this->getPatient();
 
         $request->validate([
-            'doctor_id'        => ['required', 'exists:doctors,id'],
+            'doctor_id' => ['required', 'exists:doctors,id'],
+            'service_id' => ['required', 'exists:services,id'],
             'appointment_date' => ['required', 'date', 'after_or_equal:today'],
             'appointment_time' => ['required'],
-            'notes'            => ['nullable', 'string', 'max:500'],
-            'service_id'       => ['nullable', 'exists:services,id'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
         // Parse the selected start time
@@ -171,16 +172,29 @@ class AppointmentController extends Controller
                 ]);
         }
 
+        // Verify the selected service belongs to the doctor
+        $service = \App\Models\Service::where('id', $request->service_id)
+            ->where('doctor_id', $request->doctor_id)
+            ->exists();
+
+        if (!$service) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'service_id' => 'Invalid service selected for this doctor.',
+                ]);
+        }
+
         // ── Create appointment ──
         try {
             $appointment = Appointment::create([
-                'patient_id'       => $patient->id,
-                'doctor_id'        => $request->doctor_id,
-                'service_id'       => $request->service_id,
+                'patient_id' => $patient->id,
+                'doctor_id' => $request->doctor_id,
+                'service_id' => $request->service_id,
                 'appointment_date' => $request->appointment_date,
                 'appointment_time' => $startTime->format('H:i:s'),
-                'status'           => 'pending',
-                'notes'            => $request->notes,
+                'status' => 'pending',
+                'notes' => $request->notes,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
             return back()
@@ -190,6 +204,9 @@ class AppointmentController extends Controller
                 ]);
         }
 
+        // Get service details for notification
+        $serviceDetails = \App\Models\Service::find($request->service_id);
+
         // ── Notify patient ──
         $appointment->load(['patient', 'doctor']);
         \App\Models\Notification::create([
@@ -197,9 +214,9 @@ class AppointmentController extends Controller
             'message' => "Your appointment request with Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name} on " .
                          $appointment->appointment_date->format('d M Y') . " from " .
                          $startTime->format('h:i A') . " to " . $endTime->format('h:i A') .
-                         " ({$durationLabel}) has been submitted and is awaiting confirmation.",
-            'type'    => 'general',
-            'status'  => 'unread',
+                         " ({$durationLabel}) for service '{$serviceDetails->name}' has been submitted and is awaiting confirmation.",
+            'type' => 'general',
+            'status' => 'unread',
         ]);
 
         // ── Notify doctor ──
@@ -208,9 +225,9 @@ class AppointmentController extends Controller
             'message' => "New appointment request from {$appointment->patient->first_name} {$appointment->patient->last_name} on " .
                          $appointment->appointment_date->format('d M Y') . " from " .
                          $startTime->format('h:i A') . " to " . $endTime->format('h:i A') .
-                         " ({$durationLabel}). Please confirm or update the status.",
-            'type'    => 'general',
-            'status'  => 'unread',
+                         " ({$durationLabel}) for service '{$serviceDetails->name}'. Please confirm or update the status.",
+            'type' => 'general',
+            'status' => 'unread',
         ]);
 
         return redirect()->route('patient.appointments.index')
@@ -224,7 +241,7 @@ class AppointmentController extends Controller
         
         // Load the availability to get the end time
         $availability = Availability::where('doctor_id', $appointment->doctor_id)
-            ->whereDate('available_date', $appointment->appointment_date)
+            ->whereDate('appointment_date', $appointment->appointment_date)
             ->whereTime('start_time', Carbon::parse($appointment->appointment_time)->format('H:i:s'))
             ->first();
         

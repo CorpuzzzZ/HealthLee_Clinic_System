@@ -69,9 +69,9 @@ class MedicalRecordController extends Controller
     {
         $request->validate([
             'appointment_id' => ['required', 'exists:appointments,id'],
-            'diagnosis'      => ['required', 'string'],
-            'treatment'      => ['required', 'string'],
-            'notes'          => ['nullable', 'string'],
+            'diagnosis' => ['required', 'string'],
+            'treatment' => ['required', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         $appointment = Appointment::findOrFail($request->appointment_id);
@@ -80,9 +80,9 @@ class MedicalRecordController extends Controller
 
         MedicalRecord::create([
             'appointment_id' => $appointment->id,
-            'diagnosis'      => $request->diagnosis,
-            'treatment'      => $request->treatment,
-            'notes'          => $request->notes,
+            'diagnosis' => $request->diagnosis,
+            'treatment' => $request->treatment,
+            'notes' => $request->notes,
         ]);
 
         return redirect()->route('doctor.medical-records.index')
@@ -110,13 +110,13 @@ class MedicalRecordController extends Controller
         $request->validate([
             'diagnosis' => ['required', 'string'],
             'treatment' => ['required', 'string'],
-            'notes'     => ['nullable', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         $medicalRecord->update([
             'diagnosis' => $request->diagnosis,
             'treatment' => $request->treatment,
-            'notes'     => $request->notes,
+            'notes' => $request->notes,
         ]);
 
         return redirect()->route('doctor.medical-records.index')

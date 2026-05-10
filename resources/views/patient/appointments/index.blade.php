@@ -99,9 +99,10 @@
                             <th class="px-4 py-3 text-muted fw-normal small border-0">#</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Doctor</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Date & Time</th>
+                            <th class="px-4 py-3 text-muted fw-normal small border-0">Service</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0">Status</th>
                             <th class="px-4 py-3 text-muted fw-normal small border-0 text-center">Actions</th>
-                        </tr>
+                        <tr>
                     </thead>
                     <tbody>
                         @forelse($appointments as $appointment)
@@ -152,7 +153,26 @@
                                 </div>
                                 <small class="text-muted">
                                     {{ \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A') }}
+                                    @if($appointment->service)
+                                    <span class="badge ms-1"
+                                        style="background: #e7f1ff; color: #0d6efd; font-size: 0.65rem;">
+                                        {{ $appointment->service->name }}
+                                    </span>
+                                    @endif
                                 </small>
+                            </td>
+
+                            {{-- Service --}}
+                            <td class="px-4 border-0">
+                                @if($appointment->service)
+                                <span class="badge rounded-pill px-3 py-2"
+                                    style="background: #e8f5ee; color: #198754; font-size: 0.72rem;">
+                                    <i class="bi bi-clipboard2-pulse me-1"></i>
+                                    {{ Str::limit($appointment->service->name, 20) }}
+                                </span>
+                                @else
+                                <small class="text-muted">—</small>
+                                @endif
                             </td>
 
                             {{-- Status --}}
@@ -201,7 +221,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted border-0">
+                            <td colspan="6" class="text-center py-5 text-muted border-0">
                                 <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-25"></i>
                                 <div class="fw-medium">No appointments found</div>
                                 <small>

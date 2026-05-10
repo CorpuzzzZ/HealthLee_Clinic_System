@@ -79,16 +79,16 @@ class PatientRecordController extends Controller
         // Removed restriction - doctors can update any patient record
 
         $request->validate([
-            'birthdate'  => ['nullable', 'date', 'before:today'],
-            'height'     => ['nullable', 'numeric', 'min:1', 'max:300'],
-            'weight'     => ['nullable', 'numeric', 'min:1', 'max:700'],
+            'birthdate' => ['nullable', 'date', 'before:today'],
+            'height' => ['nullable', 'numeric', 'min:1', 'max:300'],
+            'weight' => ['nullable', 'numeric', 'min:1', 'max:700'],
             'blood_type' => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
         ]);
 
         $patient->update([
-            'birthdate'  => $request->birthdate,
-            'height'     => $request->height,
-            'weight'     => $request->weight,
+            'birthdate' => $request->birthdate,
+            'height' => $request->height,
+            'weight' => $request->weight,
             'blood_type' => $request->blood_type,
         ]);
 

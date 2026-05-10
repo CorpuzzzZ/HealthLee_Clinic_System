@@ -21,35 +21,35 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'role'           => ['required', 'in:admin,patient,doctor'],
-            'first_name'     => ['required', 'string', 'max:255'],
-            'middle_name'    => ['nullable', 'string', 'max:255'],
-            'last_name'      => ['required', 'string', 'max:255'],
-            'gender'         => ['required', 'in:male,female,other'],
+            'role' => ['required', 'in:admin,patient,doctor'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'gender' => ['required', 'in:male,female,other'],
             'contact_number' => ['required', 'string', 'max:20'],
-            'specialty'      => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
-            'birthdate'      => ['nullable', 'date', 'before:today'],
-            'height'         => ['nullable', 'numeric', 'min:1', 'max:300'],
-            'weight'         => ['nullable', 'numeric', 'min:1', 'max:700'],
-            'blood_type'     => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
-            'street'         => ['nullable', 'string', 'max:255'],
-            'barangay'       => ['nullable', 'string', 'max:255'],
-            'city'           => ['nullable', 'string', 'max:255'],
-            'province'       => ['nullable', 'string', 'max:255'],
-            'zip_code'       => ['nullable', 'string', 'max:10'],
-            'email'          => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'password'       => ['required', 'confirmed', Rules\Password::defaults()],
+            'specialty' => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
+            'birthdate' => ['nullable', 'date', 'before:today'],
+            'height' => ['nullable', 'numeric', 'min:1', 'max:300'],
+            'weight' => ['nullable', 'numeric', 'min:1', 'max:700'],
+            'blood_type' => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'barangay' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'province' => ['nullable', 'string', 'max:255'],
+            'zip_code' => ['nullable', 'string', 'max:10'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
             // Services validation
-            'services'               => ['nullable', 'array'],
-            'services.*.name'        => ['required_with:services.*', 'string', 'max:255'],
+            'services' => ['nullable', 'array'],
+            'services.*.name' => ['required_with:services.*', 'string', 'max:255'],
             'services.*.description' => ['nullable', 'string'],
-            'services.*.price'       => ['nullable', 'numeric', 'min:0'],
+            'services.*.price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $user = User::create([
-            'email'    => $request->email,
+            'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role'     => $request->role,
+            'role' => $request->role,
         ]);
 
         // Create contact and address for the user (centralized)
@@ -58,29 +58,29 @@ class UserController extends Controller
         ]);
 
         $user->address()->create([
-            'street'   => $request->street,
+            'street' => $request->street,
             'barangay' => $request->barangay,
-            'city'     => $request->city,
+            'city' => $request->city,
             'province' => $request->province,
             'zip_code' => $request->zip_code,
         ]);
 
         // Shared core data for all roles (without contact/address)
         $coreData = [
-            'user_id'     => $user->id,
-            'first_name'  => $request->first_name,
+            'user_id' => $user->id,
+            'first_name' => $request->first_name,
             'middle_name' => $request->middle_name,
-            'last_name'   => $request->last_name,
-            'gender'      => $request->gender,
+            'last_name' => $request->last_name,
+            'gender' => $request->gender,
         ];
 
         match ($request->role) {
             'admin' => Admin::create($coreData),
 
             'patient' => Patient::create(array_merge($coreData, [
-                'birthdate'  => $request->birthdate,
-                'height'     => $request->height,
-                'weight'     => $request->weight,
+                'birthdate' => $request->birthdate,
+                'height' => $request->height,
+                'weight' => $request->weight,
                 'blood_type' => $request->blood_type,
             ])),
 
@@ -92,9 +92,9 @@ class UserController extends Controller
                     foreach ($request->services as $svc) {
                         if (!empty($svc['name'])) {
                             $doctor->services()->create([
-                                'name'        => $svc['name'],
+                                'name' => $svc['name'],
                                 'description' => $svc['description'] ?? null,
-                                'price'       => $svc['price'] ?? null,
+                                'price' => $svc['price'] ?? null,
                             ]);
                         }
                     }
@@ -174,33 +174,33 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'role'           => ['required', 'in:admin,patient,doctor'],
-            'first_name'     => ['required', 'string', 'max:255'],
-            'middle_name'    => ['nullable', 'string', 'max:255'],
-            'last_name'      => ['required', 'string', 'max:255'],
-            'gender'         => ['required', 'in:male,female,other'],
+            'role' => ['required', 'in:admin,patient,doctor'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'gender' => ['required', 'in:male,female,other'],
             'contact_number' => ['required', 'string', 'max:20'],
-            'specialty'      => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
-            'birthdate'      => ['nullable', 'date', 'before:today'],
-            'height'         => ['nullable', 'numeric', 'min:1', 'max:300'],
-            'weight'         => ['nullable', 'numeric', 'min:1', 'max:700'],
-            'blood_type'     => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
-            'street'         => ['nullable', 'string', 'max:255'],
-            'barangay'       => ['nullable', 'string', 'max:255'],
-            'city'           => ['nullable', 'string', 'max:255'],
-            'province'       => ['nullable', 'string', 'max:255'],
-            'zip_code'       => ['nullable', 'string', 'max:10'],
-            'email'          => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'specialty' => ['nullable', 'required_if:role,doctor', 'string', 'max:255'],
+            'birthdate' => ['nullable', 'date', 'before:today'],
+            'height' => ['nullable', 'numeric', 'min:1', 'max:300'],
+            'weight' => ['nullable', 'numeric', 'min:1', 'max:700'],
+            'blood_type' => ['nullable', 'in:A+,A-,B+,B-,AB+,AB-,O+,O-'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'barangay' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'province' => ['nullable', 'string', 'max:255'],
+            'zip_code' => ['nullable', 'string', 'max:10'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . $user->id],
             // Services validation
-            'services'               => ['nullable', 'array'],
-            'services.*.name'        => ['required_with:services.*', 'string', 'max:255'],
+            'services' => ['nullable', 'array'],
+            'services.*.name' => ['required_with:services.*', 'string', 'max:255'],
             'services.*.description' => ['nullable', 'string'],
-            'services.*.price'       => ['nullable', 'numeric', 'min:0'],
+            'services.*.price'=> ['nullable', 'numeric', 'min:0'],
         ]);
 
         $user->update([
             'email' => $request->email,
-            'role'  => $request->role,
+            'role' => $request->role,
         ]);
 
         // Update contact and address (centralized)
@@ -212,19 +212,19 @@ class UserController extends Controller
         $user->address()->updateOrCreate(
             ['user_id' => $user->id],
             [
-                'street'   => $request->street,
+                'street' => $request->street,
                 'barangay' => $request->barangay,
-                'city'     => $request->city,
+                'city' => $request->city,
                 'province' => $request->province,
                 'zip_code' => $request->zip_code,
             ]
         );
 
         $coreData = [
-            'first_name'  => $request->first_name,
+            'first_name' => $request->first_name,
             'middle_name' => $request->middle_name,
-            'last_name'   => $request->last_name,
-            'gender'      => $request->gender,
+            'last_name' => $request->last_name,
+            'gender' => $request->gender,
         ];
 
         match ($request->role) {
@@ -236,9 +236,9 @@ class UserController extends Controller
             'patient' => $user->patient()->updateOrCreate(
                 ['user_id' => $user->id],
                 array_merge($coreData, [
-                    'birthdate'  => $request->birthdate,
-                    'height'     => $request->height,
-                    'weight'     => $request->weight,
+                    'birthdate' => $request->birthdate,
+                    'height' => $request->height,
+                    'weight' => $request->weight,
                     'blood_type' => $request->blood_type,
                 ])
             ),

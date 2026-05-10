@@ -168,8 +168,8 @@
         // Live BMI preview
         const heightInput = document.querySelector('input[name="height"]');
         const weightInput = document.querySelector('input[name="weight"]');
-        const bmiPreview  = document.getElementById('bmiPreview');
-        const bmiValue    = document.getElementById('bmiValue');
+        const bmiPreview = document.getElementById('bmiPreview');
+        const bmiValue = document.getElementById('bmiValue');
 
         function calcBMI() {
             const h = parseFloat(heightInput.value);
@@ -179,10 +179,10 @@
                 const bmi = w / ((h / 100) ** 2);
                 let label, color;
 
-                if (bmi < 18.5)      { label = 'Underweight'; color = '#e6a800'; }
-                else if (bmi < 25)   { label = 'Normal';       color = '#198754'; }
-                else if (bmi < 30)   { label = 'Overweight';   color = '#fd7e14'; }
-                else                 { label = 'Obese';         color = '#dc3545'; }
+                if (bmi < 18.5) { label = 'Underweight'; color = '#e6a800'; }
+                else if (bmi < 25) { label = 'Normal';       color = '#198754'; }
+                else if (bmi < 30) { label = 'Overweight';   color = '#fd7e14'; }
+                else { label = 'Obese';         color = '#dc3545'; }
 
                 bmiValue.innerHTML = `BMI: <span style="color: ${color};">${bmi.toFixed(2)} — ${label}</span>`;
                 bmiPreview.style.display = 'block';

@@ -13,10 +13,10 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $totalUsers        = User::count();
-        $totalPatients     = Patient::count();
-        $totalDoctors      = Doctor::count();
-        $totalAdmins       = Admin::count();
+        $totalUsers = User::count();
+        $totalPatients = Patient::count();
+        $totalDoctors = Doctor::count();
+        $totalAdmins = Admin::count();
         $totalAppointments = Appointment::count();
 
         $recentDoctors = User::with('doctor')

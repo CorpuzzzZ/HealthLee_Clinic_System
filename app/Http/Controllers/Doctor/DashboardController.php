@@ -53,10 +53,10 @@ class DashboardController extends Controller
 
         // Total counts
         $totalAppointments = Appointment::where('doctor_id', $doctor->id)->count();
-        $totalToday        = $todaysAppointments->count();
-        $totalCompleted    = Appointment::where('doctor_id', $doctor->id)
+        $totalToday = $todaysAppointments->count();
+        $totalCompleted = Appointment::where('doctor_id', $doctor->id)
                                         ->where('status', 'completed')->count();
-        $totalPatients     = Appointment::where('doctor_id', $doctor->id)
+        $totalPatients = Appointment::where('doctor_id', $doctor->id)
                                         ->distinct('patient_id')
                                         ->count('patient_id');
 

@@ -406,7 +406,6 @@
             const row = btn.closest('.service-row');
             row.remove();
 
-            // Show placeholder again if no services left
             const remaining = document.querySelectorAll('.service-row').length;
             const placeholder = document.getElementById('servicesPlaceholder');
             if (remaining === 0 && placeholder) {
@@ -414,10 +413,8 @@
             }
         }
 
-        // Auto-add one empty service row when doctor is first selected
         (function () {
             const roleEl = document.getElementById('role');
-            // Only auto-add if no old() data repopulated rows
             if (roleEl.value === 'doctor' && document.querySelectorAll('.service-row').length === 0) {
                 addServiceRow();
             }

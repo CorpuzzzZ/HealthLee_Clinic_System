@@ -50,8 +50,8 @@ class AvailabilityController extends Controller
     {
         $request->validate([
             'available_date' => ['required', 'date', 'after_or_equal:today'],
-            'start_time'     => ['required', 'date_format:H:i'],
-            'end_time'       => ['required', 'date_format:H:i', 'after:start_time'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
         ], [
             'end_time.after' => 'End time must be after start time.',
         ]);
@@ -76,8 +76,8 @@ class AvailabilityController extends Controller
 
         $doctor->availabilities()->create([
             'available_date' => $request->available_date,
-            'start_time'     => $request->start_time,
-            'end_time'       => $request->end_time,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
         ]);
 
         return redirect()->route('doctor.availabilities.index')
@@ -90,8 +90,8 @@ class AvailabilityController extends Controller
 
         $request->validate([
             'available_date' => ['required', 'date'],
-            'start_time'     => ['required', 'date_format:H:i'],
-            'end_time'       => ['required', 'date_format:H:i', 'after:start_time'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
         ], [
             'end_time.after' => 'End time must be after start time.',
         ]);
@@ -121,8 +121,8 @@ class AvailabilityController extends Controller
 
         $availability->update([
             'available_date' => $request->available_date,
-            'start_time'     => $request->start_time,
-            'end_time'       => $request->end_time,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
         ]);
 
         return redirect()->route('doctor.availabilities.index')
