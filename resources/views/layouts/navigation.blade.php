@@ -13,12 +13,12 @@
             <i class="bi bi-people me-2"></i> <small>Manage Users</small>
         </a>
     </li>
-    <li class="nav-item">
+    {{-- <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('admin.patient-records.*') ? 'active' : '' }}"
             href="{{ route('admin.patient-records.index') }}">
             <i class="bi bi-clipboard2-pulse me-2"></i> <small>Patient Records</small>
         </a>
-    </li>
+    </li> --}}
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}"
             href="{{ route('admin.reports.index') }}">

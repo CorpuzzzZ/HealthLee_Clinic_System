@@ -296,7 +296,7 @@
                             <small class="text-primary">
                                 <i class="bi bi-info-circle-fill me-1"></i>
                                 Your appointment will be <strong>Pending</strong> until the doctor confirms.
-                                Each slot is <strong>1 hour</strong>.
+                                Each time slot represents the doctor's available window.
                                 Slots marked
                                 <span style="text-decoration: line-through; color: #adb5bd;">like this</span>
                                 are already booked.
@@ -326,8 +326,6 @@
         const SLOTS_URL = "{{ route('patient.appointments.slots') }}";
 
         // ── FIX: Use local date (not UTC) to avoid timezone offset issues ──
-        // toISOString() returns UTC, which can shift the date by ±1 day
-        // depending on the user's timezone (e.g. PH is UTC+8).
         const _today    = new Date();
         const TODAY     = [
             _today.getFullYear(),
@@ -528,7 +526,7 @@
             }
         });
 
-        // ── Render slot cards ──
+        // ── Render slot cards (updated to show duration) ──
         function renderSlots(slots) {
             const grid  = document.getElementById('slotGrid');
             grid.innerHTML = '';
@@ -547,8 +545,9 @@
                 card.className        = 'slot-card' + (slot.booked ? ' booked' : '');
                 card.dataset.value    = slot.value;
                 card.innerHTML = `
-                    <div class="sc-start">${parts[0] ?? slot.label}</div>
-                    <div class="sc-end">${parts[1] ? '– ' + parts[1] : '1 hr'}</div>`;
+                    <div class="sc-start">${parts[0] ?? slot.label} – ${parts[1] ?? ''}</div>
+                    <div class="sc-end">${slot.duration_label || 'Flexible duration'}</div>
+                `;
 
                 if (!slot.booked) {
                     card.addEventListener('click', () => selectSlot(card, slot.value));

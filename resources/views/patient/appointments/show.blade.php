@@ -30,7 +30,27 @@
     ];
 
     $startTime = \Carbon\Carbon::parse($appointment->appointment_time);
-    $endTime = $startTime->copy()->addHour();
+
+    // Get the actual end time from availability
+    $availability = \App\Models\Availability::where('doctor_id', $appointment->doctor_id)
+    ->whereDate('available_date', $appointment->appointment_date)
+    ->whereTime('start_time', $startTime->format('H:i:s'))
+    ->first();
+
+    $endTime = $availability ? \Carbon\Carbon::parse($availability->end_time) : $startTime->copy()->addHour();
+    $duration = $startTime->diffInMinutes($endTime);
+
+    // Format duration label
+    $hours = floor($duration / 60);
+    $mins = $duration % 60;
+    $durationLabel = '';
+    if ($hours > 0 && $mins > 0) {
+    $durationLabel = $hours . 'h ' . $mins . 'm';
+    } elseif ($hours > 0) {
+    $durationLabel = $hours . ' hour' . ($hours > 1 ? 's' : '');
+    } else {
+    $durationLabel = $mins . ' minute' . ($mins > 1 ? 's' : '');
+    }
     @endphp
 
     <div class="row g-4">
@@ -57,6 +77,7 @@
                             <div class="text-muted small">Time</div>
                             <div class="fw-semibold">
                                 {{ $startTime->format('h:i A') }} – {{ $endTime->format('h:i A') }}
+                                <small class="text-muted">({{ $durationLabel }})</small>
                             </div>
                         </div>
                         <div class="text-center">
@@ -119,10 +140,7 @@
                             <div class="p-3 rounded-3" style="background: #f8f9fa;">
                                 <small class="text-muted d-block mb-1">Contact</small>
                                 <span class="fw-medium small">
-                                    {{-- supports both normalized (doctor->contact->contact_number) and flat --}}
-                                    {{ $appointment->doctor->contact->contact_number
-                                    ?? $appointment->doctor->contact_number
-                                    ?? '—' }}
+                                    {{ $appointment->doctor->user->contact->contact_number ?? '—' }}
                                 </span>
                             </div>
                         </div>

@@ -94,13 +94,12 @@ class AppointmentController extends Controller
                 foreach ($availabilitiesForDate as $avail) {
                     $start = Carbon::createFromFormat('H:i:s', $avail->start_time);
                     $end   = Carbon::createFromFormat('H:i:s', $avail->end_time);
-
-                    while ($start->copy()->addHour()->lte($end)) {
-                        if (!in_array($start->format('H:i'), $bookedTimes)) {
-                            $hasAvailableSlot = true;
-                            break 2;
-                        }
-                        $start->addHour();
+                    
+                    // Check if this specific time window is available (not just 1-hour slots)
+                    $slotStart = $start->format('H:i');
+                    if (!in_array($slotStart, $bookedTimes)) {
+                        $hasAvailableSlot = true;
+                        break;
                     }
                 }
 
@@ -132,57 +131,43 @@ class AppointmentController extends Controller
             'service_id'       => ['nullable', 'exists:services,id'],
         ]);
 
-        // ── Appointment duration is 1 hour ──
+        // Parse the selected start time
         $startTime = Carbon::parse($request->appointment_time);
-        $endTime   = $startTime->copy()->addHour();
-
-        // ── Check doctor has availability on the selected date ──
-        $availabilityExists = Availability::where('doctor_id', $request->doctor_id)
+        
+        // Find the availability slot that matches this start time
+        $availability = Availability::where('doctor_id', $request->doctor_id)
+            ->whereDate('available_date', $request->appointment_date)
             ->get()
-            ->filter(fn($a) => Carbon::parse($a->available_date)->format('Y-m-d') === $request->appointment_date)
-            ->isNotEmpty();
+            ->first(function ($a) use ($startTime) {
+                return Carbon::parse($a->start_time)->format('H:i') === $startTime->format('H:i');
+            });
 
-        if (!$availabilityExists) {
+        if (!$availability) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'appointment_date' => 'The doctor has no availability on the selected date. Please choose a different date.',
+                    'appointment_time' => 'Invalid time slot selected.',
                 ]);
         }
 
-        // ── Check the full 1-hour slot fits within the doctor's availability ──
-        $slotFits = Availability::where('doctor_id', $request->doctor_id)
-            ->get()
-            ->filter(fn($a) => Carbon::parse($a->available_date)->format('Y-m-d') === $request->appointment_date)
-            ->filter(fn($a) => $a->start_time <= $startTime->format('H:i:s')
-                            && $a->end_time   >= $endTime->format('H:i:s'))
-            ->isNotEmpty();
+        $endTime = Carbon::parse($availability->end_time);
+        $duration = $startTime->diffInMinutes($endTime);
+        
+        // Format duration label for notifications
+        $durationLabel = $this->formatDuration($duration);
 
-        if (!$slotFits) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'appointment_time' => 'The selected time slot (1 hour duration) does not fit within the doctor\'s available hours.',
-                ]);
-        }
-
-        // ── Check no overlapping appointment exists for this doctor ──
-        $overlapping = Appointment::where('doctor_id', $request->doctor_id)
+        // ── Check if this exact time window is already booked ──
+        $isBooked = Appointment::where('doctor_id', $request->doctor_id)
             ->whereDate('appointment_date', $request->appointment_date)
+            ->whereTime('appointment_time', $startTime->format('H:i:s'))
             ->whereNotIn('status', ['cancelled'])
-            ->where(function ($query) use ($startTime, $endTime) {
-                $query->where(function ($q) use ($startTime, $endTime) {
-                    $q->where('appointment_time', '<', $endTime->format('H:i:s'))
-                      ->whereRaw("ADDTIME(appointment_time, '01:00:00') > ?", [$startTime->format('H:i:s')]);
-                });
-            })
             ->exists();
 
-        if ($overlapping) {
+        if ($isBooked) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'appointment_time' => 'This time slot overlaps with an existing appointment. Each appointment is 1 hour. Please choose a different time.',
+                    'appointment_time' => 'This time slot is already booked. Please choose another time.',
                 ]);
         }
 
@@ -201,7 +186,7 @@ class AppointmentController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'appointment_time' => 'This time slot is already booked. The database prevented a double booking.',
+                    'appointment_time' => 'Unable to book appointment. Please try again.',
                 ]);
         }
 
@@ -210,9 +195,9 @@ class AppointmentController extends Controller
         \App\Models\Notification::create([
             'user_id' => $patient->user_id,
             'message' => "Your appointment request with Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name} on " .
-                         $appointment->appointment_date->format('d M Y') . " at " .
-                         $startTime->format('h:i A') . " – " . $endTime->format('h:i A') .
-                         " has been submitted and is awaiting confirmation.",
+                         $appointment->appointment_date->format('d M Y') . " from " .
+                         $startTime->format('h:i A') . " to " . $endTime->format('h:i A') .
+                         " ({$durationLabel}) has been submitted and is awaiting confirmation.",
             'type'    => 'general',
             'status'  => 'unread',
         ]);
@@ -221,9 +206,9 @@ class AppointmentController extends Controller
         \App\Models\Notification::create([
             'user_id' => $appointment->doctor->user_id,
             'message' => "New appointment request from {$appointment->patient->first_name} {$appointment->patient->last_name} on " .
-                         $appointment->appointment_date->format('d M Y') . " at " .
-                         $startTime->format('h:i A') . " – " . $endTime->format('h:i A') .
-                         ". Please confirm or update the status.",
+                         $appointment->appointment_date->format('d M Y') . " from " .
+                         $startTime->format('h:i A') . " to " . $endTime->format('h:i A') .
+                         " ({$durationLabel}). Please confirm or update the status.",
             'type'    => 'general',
             'status'  => 'unread',
         ]);
@@ -233,11 +218,20 @@ class AppointmentController extends Controller
     }
 
     public function show(Appointment $appointment)
-{
-    abort_if($appointment->patient_id !== $this->getPatient()->id, 403);
-    $appointment->load(['doctor', 'medicalRecord', 'service']);
-    return view('patient.appointments.show', compact('appointment'));
-}
+    {
+        abort_if($appointment->patient_id !== $this->getPatient()->id, 403);
+        $appointment->load(['doctor', 'medicalRecord', 'service']);
+        
+        // Load the availability to get the end time
+        $availability = Availability::where('doctor_id', $appointment->doctor_id)
+            ->whereDate('available_date', $appointment->appointment_date)
+            ->whereTime('start_time', Carbon::parse($appointment->appointment_time)->format('H:i:s'))
+            ->first();
+        
+        $endTime = $availability ? Carbon::parse($availability->end_time) : null;
+        
+        return view('patient.appointments.show', compact('appointment', 'endTime'));
+    }
 
     public function cancel(Appointment $appointment)
     {
@@ -263,7 +257,7 @@ class AppointmentController extends Controller
         $doctor = Doctor::findOrFail($request->doctor_id);
         $date   = $request->date;
 
-        // Fetch all and filter in PHP using Carbon to handle timezone correctly
+        // Fetch all availabilities for this date
         $availabilities = Availability::where('doctor_id', $doctor->id)
             ->get()
             ->filter(fn($a) => Carbon::parse($a->available_date)->format('Y-m-d') === $date);
@@ -272,8 +266,8 @@ class AppointmentController extends Controller
             return response()->json(['slots' => []]);
         }
 
-        // Get already booked times on that date (excluding cancelled)
-        $bookedTimes = Appointment::where('doctor_id', $doctor->id)
+        // Get already booked slots for this date (excluding cancelled)
+        $bookedSlots = Appointment::where('doctor_id', $doctor->id)
             ->whereDate('appointment_date', $date)
             ->whereNotIn('status', ['cancelled'])
             ->pluck('appointment_time')
@@ -285,23 +279,39 @@ class AppointmentController extends Controller
         foreach ($availabilities as $avail) {
             $start = Carbon::createFromFormat('H:i:s', $avail->start_time);
             $end   = Carbon::createFromFormat('H:i:s', $avail->end_time);
+            
+            $slotStart = $start->format('H:i');
+            $slotEnd = $end->format('H:i');
+            $duration = $start->diffInMinutes($end);
+            $durationLabel = $this->formatDuration($duration);
+            
+            $isBooked = in_array($slotStart, $bookedSlots);
 
-            while ($start->copy()->addHour()->lte($end)) {
-                $slotStart = $start->format('H:i');
-                $slotEnd   = $start->copy()->addHour()->format('H:i');
-
-                $slots[] = [
-                    'value'  => $slotStart,
-                    'label'  => Carbon::createFromFormat('H:i', $slotStart)->format('h:i A')
-                              . ' – '
-                              . Carbon::createFromFormat('H:i', $slotEnd)->format('h:i A'),
-                    'booked' => in_array($slotStart, $bookedTimes),
-                ];
-
-                $start->addHour();
-            }
+            $slots[] = [
+                'value'  => $slotStart,
+                'label'  => Carbon::createFromFormat('H:i', $slotStart)->format('h:i A')
+                          . ' – '
+                          . Carbon::createFromFormat('H:i', $slotEnd)->format('h:i A'),
+                'duration_label' => $durationLabel,
+                'duration_minutes' => $duration,
+                'booked' => $isBooked,
+            ];
         }
 
         return response()->json(['slots' => $slots]);
+    }
+
+    private function formatDuration($minutes)
+    {
+        $hours = floor($minutes / 60);
+        $mins = $minutes % 60;
+        
+        if ($hours > 0 && $mins > 0) {
+            return $hours . 'h ' . $mins . 'm';
+        } elseif ($hours > 0) {
+            return $hours . ' hour' . ($hours > 1 ? 's' : '');
+        } else {
+            return $mins . ' minute' . ($mins > 1 ? 's' : '');
+        }
     }
 }

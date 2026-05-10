@@ -90,26 +90,20 @@
 
                     {{-- Available Slots Count --}}
                     @php
-                    $totalAvailable = $availabilities->sum(function ($slot) use ($bookedTimes) {
-                    $start = \Carbon\Carbon::createFromFormat('H:i:s',
-                    \Carbon\Carbon::parse($slot->start_time)->format('H:i:s'));
-                    $end = \Carbon\Carbon::createFromFormat('H:i:s',
-                    \Carbon\Carbon::parse($slot->end_time)->format('H:i:s'));
+                    $totalAvailable = 0;
+                    foreach ($availabilities as $slot) {
                     $date = \Carbon\Carbon::parse($slot->available_date)->format('Y-m-d');
-                    $count = 0;
-                    while ($start->copy()->addHour()->lte($end)) {
-                    $key = $date . '_' . $start->format('H:i');
-                    if (!in_array($key, $bookedTimes)) $count++;
-                    $start->addHour();
+                    $slotKey = $date . '_' . \Carbon\Carbon::parse($slot->start_time)->format('H:i');
+                    if (!in_array($slotKey, $bookedTimes)) {
+                    $totalAvailable++;
                     }
-                    return $count;
-                    });
+                    }
                     @endphp
                     <div class="mt-3 p-3 rounded-3 text-center" style="background: #e8f5ee; border: 1px solid #c3e6cb;">
                         <div class="fw-bold fs-4" style="color: #198754;">
                             {{ $totalAvailable }}
                         </div>
-                        <small class="text-muted">Available 1-hour Slots</small>
+                        <small class="text-muted">Available Slots</small>
                     </div>
 
                 </div>
@@ -161,7 +155,7 @@
                             @endif
                         </div>
 
-                        {{-- 1-hour slot cards generated from availability window --}}
+                        {{-- Slot cards generated from availability window (any duration) --}}
                         <div class="row g-2">
                             @foreach($slots as $slot)
                             @php
@@ -169,19 +163,28 @@
                             \Carbon\Carbon::parse($slot->start_time)->format('H:i:s'));
                             $end = \Carbon\Carbon::createFromFormat('H:i:s',
                             \Carbon\Carbon::parse($slot->end_time)->format('H:i:s'));
-                            @endphp
-
-                            @while($start->copy()->addHour()->lte($end))
-                            @php
                             $slotStart = $start->format('H:i');
-                            $slotEnd = $start->copy()->addHour()->format('H:i');
+                            $slotEnd = $end->format('H:i');
                             $key = $date . '_' . $slotStart;
                             $isBooked = in_array($key, $bookedTimes);
+
+                            // Calculate duration
+                            $duration = $start->diffInMinutes($end);
+                            $hours = floor($duration / 60);
+                            $mins = $duration % 60;
+                            $durationLabel = '';
+                            if ($hours > 0 && $mins > 0) {
+                            $durationLabel = $hours . 'h ' . $mins . 'm';
+                            } elseif ($hours > 0) {
+                            $durationLabel = $hours . ' hour' . ($hours > 1 ? 's' : '');
+                            } else {
+                            $durationLabel = $mins . ' minute' . ($mins > 1 ? 's' : '');
+                            }
                             @endphp
 
                             <div class="col-sm-6 col-lg-4">
                                 <div class="p-3 rounded-3 border h-100" style="border-color: {{ $isBooked ? '#f5c6cb' : '#c3e6cb' }} !important;
-                                                           background: {{ $isBooked ? '#fdecea' : '#f0fdfc' }};">
+                                                   background: {{ $isBooked ? '#fdecea' : '#f0fdfc' }};">
 
                                     <div class="d-flex align-items-center gap-2 mb-2">
                                         <i class="bi bi-clock"
@@ -190,6 +193,10 @@
                                             {{ \Carbon\Carbon::createFromFormat('H:i', $slotStart)->format('h:i A') }}
                                             —
                                             {{ \Carbon\Carbon::createFromFormat('H:i', $slotEnd)->format('h:i A') }}
+                                            <small class="badge ms-1"
+                                                style="background: #e7f1ff; color: #0d6efd; font-size: 0.6rem;">
+                                                {{ $durationLabel }}
+                                            </small>
                                         </span>
                                     </div>
 
@@ -207,15 +214,15 @@
 
                                     @if($isBooked)
                                     <button class="btn btn-sm w-100 rounded-3 disabled" style="background: #f5c6cb; color: #dc3545;
-                                                                       font-size: 0.75rem; cursor: not-allowed;">
+                                               font-size: 0.75rem; cursor: not-allowed;">
                                         <i class="bi bi-calendar-x me-1"></i> Unavailable
                                     </button>
                                     @else
                                     <a href="{{ route('patient.appointments.create', [
-                                                               'doctor_id'        => $doctor->id,
-                                                               'appointment_date' => $date,
-                                                               'appointment_time' => $slotStart,
-                                                           ]) }}" class="btn btn-sm w-100 rounded-3"
+                                               'doctor_id'        => $doctor->id,
+                                               'appointment_date' => $date,
+                                               'appointment_time' => $slotStart,
+                                           ]) }}" class="btn btn-sm w-100 rounded-3"
                                         style="background: #0dcaf0; color: white; font-size: 0.75rem;">
                                         <i class="bi bi-calendar-plus me-1"></i> Book Slot
                                     </a>
@@ -223,9 +230,6 @@
 
                                 </div>
                             </div>
-
-                            @php $start->addHour(); @endphp
-                            @endwhile
                             @endforeach
                         </div>
 
